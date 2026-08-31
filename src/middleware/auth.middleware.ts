@@ -1,19 +1,28 @@
-// ============================================================
-// TODO — Person B
-// ============================================================
-// This file is a placeholder. Replace ALL of this file's content
-// with the real code from your handout: Person-B-handout.md
-// (look for the section headed with this exact file path)
-//
-// Steps:
-//   1. Open Person-B-handout.md
-//   2. Find the section for: src/middleware/auth.middleware.ts
-//   3. Select everything in THIS file (Ctrl/Cmd+A) and delete it
-//   4. Paste the code from the handout, then save (Ctrl/Cmd+S)
-//   5. Commit with this exact message:
-//        feat: add JWT verification middleware for protected routes
-//   6. Push to main
-//
-// See TEAM_GIT_GUIDE.md in the project root if you're not sure
-// how to commit and push.
-// ============================================================
+import { NextFunction, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { env } from '../config/env';
+import { AppError } from '../utils/AppError';
+
+interface AccessTokenPayload {
+  sub: string;
+  role: 'client' | 'freelancer' | 'admin';
+}
+
+export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith('Bearer ')) {
+    next(new AppError('Missing authentication token', 401, 'AUTH_NO_TOKEN'));
+    return;
+  }
+
+  const token = header.slice('Bearer '.length).trim();
+
+  try {
+    const payload = jwt.verify(token, env.JWT_SECRET) as AccessTokenPayload;
+    req.user = { id: payload.sub, role: payload.role };
+    next();
+  } catch {
+    next(new AppError('Invalid or expired token', 401, 'AUTH_INVALID_TOKEN'));
+  }
+}
