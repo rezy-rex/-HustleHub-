@@ -1,19 +1,21 @@
-// ============================================================
-// TODO — Person B
-// ============================================================
-// This file is a placeholder. Replace ALL of this file's content
-// with the real code from your handout: Person-B-handout.md
-// (look for the section headed with this exact file path)
-//
-// Steps:
-//   1. Open Person-B-handout.md
-//   2. Find the section for: src/middleware/validate.middleware.ts
-//   3. Select everything in THIS file (Ctrl/Cmd+A) and delete it
-//   4. Paste the code from the handout, then save (Ctrl/Cmd+S)
-//   5. Commit with this exact message:
-//        feat: add zod-based request validation middleware
-//   6. Push to main
-//
-// See TEAM_GIT_GUIDE.md in the project root if you're not sure
-// how to commit and push.
-// ============================================================
+import { NextFunction, Request, Response } from 'express';
+import { AnyZodObject, ZodError } from 'zod';
+import { AppError } from '../utils/AppError';
+
+export function validate(schema: AnyZodObject) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      req.body = schema.parse(req.body);
+      next();
+    } catch (err) {
+      if (err instanceof ZodError) {
+        const message = err.errors
+          .map((e) => `${e.path.join('.') || 'body'}: ${e.message}`)
+          .join('; ');
+        next(new AppError(`Validation failed — ${message}`, 400, 'VALIDATION_ERROR'));
+        return;
+      }
+      next(err);
+    }
+  };
+}

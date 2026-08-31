@@ -1,19 +1,31 @@
-// ============================================================
-// TODO — Person B
-// ============================================================
-// This file is a placeholder. Replace ALL of this file's content
-// with the real code from your handout: Person-B-handout.md
-// (look for the section headed with this exact file path)
-//
-// Steps:
-//   1. Open Person-B-handout.md
-//   2. Find the section for: src/middleware/error.middleware.ts
-//   3. Select everything in THIS file (Ctrl/Cmd+A) and delete it
-//   4. Paste the code from the handout, then save (Ctrl/Cmd+S)
-//   5. Commit with this exact message:
-//        feat: add centralized error handler, no stack traces leaked
-//   6. Push to main
-//
-// See TEAM_GIT_GUIDE.md in the project root if you're not sure
-// how to commit and push.
-// ============================================================
+import { NextFunction, Request, Response } from 'express';
+import { AppError } from '../utils/AppError';
+import { logger } from '../utils/logger';
+
+export function notFoundMiddleware(req: Request, res: Response): void {
+  res.status(404).json({
+    success: false,
+    error: { message: 'Route not found', code: 'NOT_FOUND' },
+  });
+}
+
+// Express recognises this as error-handling middleware specifically because
+// it takes 4 arguments — `next` must stay in the signature even though it's
+// only used implicitly (Express calls this instead of a route handler).
+export function errorMiddleware(err: unknown, req: Request, res: Response, next: NextFunction): void {
+  if (err instanceof AppError) {
+    res.status(err.statusCode).json({
+      success: false,
+      error: { message: err.message, code: err.code },
+    });
+    return;
+  }
+
+  // Unexpected error — log full detail server-side only. The client never
+  // sees a stack trace, file path, or internal configuration value.
+  logger.error('Unhandled error', err);
+  res.status(500).json({
+    success: false,
+    error: { message: 'Internal server error', code: 'INTERNAL_ERROR' },
+  });
+}
