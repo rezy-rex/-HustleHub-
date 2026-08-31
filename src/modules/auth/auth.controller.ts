@@ -1,19 +1,35 @@
-// ============================================================
-// TODO — Person D
-// ============================================================
-// This file is a placeholder. Replace ALL of this file's content
-// with the real code from your handout: Person-D-handout.md
-// (look for the section headed with this exact file path)
-//
-// Steps:
-//   1. Open Person-D-handout.md
-//   2. Find the section for: src/modules/auth/auth.controller.ts
-//   3. Select everything in THIS file (Ctrl/Cmd+A) and delete it
-//   4. Paste the code from the handout, then save (Ctrl/Cmd+S)
-//   5. Commit with this exact message:
-//        feat: wire auth controller to the service layer
-//   6. Push to main
-//
-// See TEAM_GIT_GUIDE.md in the project root if you're not sure
-// how to commit and push.
-// ============================================================
+import { NextFunction, Request, Response } from 'express';
+import { authService } from './auth.service';
+
+export const authController = {
+  async register(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, password, role } = req.body;
+      const user = await authService.register(email, password, role);
+      res.status(201).json({ success: true, data: { user } });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async login(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, password } = req.body;
+      const result = await authService.login(email, password);
+      res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async me(req: Request, res: Response, next: NextFunction) {
+    try {
+      // req.user is guaranteed to be set — authMiddleware runs before this
+      // handler and rejects the request before we get here otherwise.
+      const user = await authService.getById(req.user!.id);
+      res.status(200).json({ success: true, data: { user } });
+    } catch (err) {
+      next(err);
+    }
+  },
+};
