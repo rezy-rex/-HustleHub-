@@ -1,19 +1,18 @@
-// ============================================================
-// TODO — Person A
-// ============================================================
-// This file is a placeholder. Replace ALL of this file's content
-// with the real code from your handout: Person-A-handout.md
-// (look for the section headed with this exact file path)
-//
-// Steps:
-//   1. Open Person-A-handout.md
-//   2. Find the section for: src/modules/auth/auth.schema.ts
-//   3. Select everything in THIS file (Ctrl/Cmd+A) and delete it
-//   4. Paste the code from the handout, then save (Ctrl/Cmd+S)
-//   5. Commit with this exact message:
-//        feat: add zod validation schemas for register and login
-//   6. Push to main
-//
-// See TEAM_GIT_GUIDE.md in the project root if you're not sure
-// how to commit and push.
-// ============================================================
+import { z } from 'zod';
+
+export const RegisterSchema = z.object({
+  email: z.string().email('Must be a valid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  // Admin cannot be self-assigned at registration — prevents a client from
+  // granting themselves elevated privileges. Admin accounts are seeded/
+  // promoted separately (Part 2).
+  role: z.enum(['client', 'freelancer']).default('client'),
+});
+
+export const LoginSchema = z.object({
+  email: z.string().email('Must be a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export type RegisterInput = z.infer<typeof RegisterSchema>;
+export type LoginInput = z.infer<typeof LoginSchema>;
