@@ -1,19 +1,16 @@
-// ============================================================
-// TODO — Person D
-// ============================================================
-// This file is a placeholder. Replace ALL of this file's content
-// with the real code from your handout: Person-D-handout.md
-// (look for the section headed with this exact file path)
-//
-// Steps:
-//   1. Open Person-D-handout.md
-//   2. Find the section for: src/modules/auth/auth.routes.ts
-//   3. Select everything in THIS file (Ctrl/Cmd+A) and delete it
-//   4. Paste the code from the handout, then save (Ctrl/Cmd+S)
-//   5. Commit with this exact message:
-//        feat: wire auth routes - register, login, protected /me
-//   6. Push to main
-//
-// See TEAM_GIT_GUIDE.md in the project root if you're not sure
-// how to commit and push.
-// ============================================================
+import { Router } from 'express';
+import { authController } from './auth.controller';
+import { authMiddleware } from '../../middleware/auth.middleware';
+import { validate } from '../../middleware/validate.middleware';
+import { RegisterSchema, LoginSchema } from './auth.schema';
+
+const router = Router();
+
+router.post('/register', validate(RegisterSchema), authController.register);
+router.post('/login', validate(LoginSchema), authController.login);
+
+// Protected route — demonstrates JWT enforcement beyond login, as the
+// rubric specifically requires.
+router.get('/me', authMiddleware, authController.me);
+
+export default router;
