@@ -1,19 +1,22 @@
-// ============================================================
-// TODO — Person C
-// ============================================================
-// This file is a placeholder. Replace ALL of this file's content
-// with the real code from your handout: Person-C1-handout.md
-// (look for the section headed with this exact file path)
-//
-// Steps:
-//   1. Open Person-C1-handout.md
-//   2. Find the section for: src/utils/logger.ts
-//   3. Select everything in THIS file (Ctrl/Cmd+A) and delete it
-//   4. Paste the code from the handout, then save (Ctrl/Cmd+S)
-//   5. Commit with this exact message:
-//        feat: add server-side logger
-//   6. Push to main
-//
-// See TEAM_GIT_GUIDE.md in the project root if you're not sure
-// how to commit and push.
-// ============================================================
+type LogLevel = 'info' | 'warn' | 'error';
+
+function log(level: LogLevel, message: string, meta?: unknown): void {
+  const timestamp = new Date().toISOString();
+  const line = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+  if (level === 'error') {
+    console.error(line, meta ?? '');
+  } else if (level === 'warn') {
+    console.warn(line, meta ?? '');
+  } else {
+    console.log(line, meta ?? '');
+  }
+}
+
+// Part 1 scope: console output only. Part 3 extends this with structured,
+// event-based logging (login attempts, bookings, transactions) per the
+// DevSecOps rubric requirements.
+export const logger = {
+  info: (message: string, meta?: unknown) => log('info', message, meta),
+  warn: (message: string, meta?: unknown) => log('warn', message, meta),
+  error: (message: string, meta?: unknown) => log('error', message, meta),
+};
