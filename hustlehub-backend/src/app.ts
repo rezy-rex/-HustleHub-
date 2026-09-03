@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(morgan('dev'));
 
-app.use('/api/auth', authRoutes);
+app.use('/api/users', authRoutes);
 
 // Order matters: 404 handler, then the error handler, always last.
 app.use(notFoundMiddleware);

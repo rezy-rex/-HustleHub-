@@ -1,4 +1,4 @@
-# HustleHub+ — Backend (Part 1: Secure Foundations)
+# HustleHub+ — Backend (Part 1: )
 
 APDS7311/w · INSY7314/w — Application Development Security POE
 
@@ -17,27 +17,7 @@ privilege escalation (see §4).
 
 ## 2. Architecture
 
-```
-Client (Postman today, React in Part 2)
-        │  HTTPS (TLS)
-        ▼
-┌─────────────────────────────────────────┐
-│ Express API server  (trust boundary)     │
-│                                           │
-│  Middleware pipeline                     │
-│    → JSON body parsing                   │
-│    → Zod input validation                │
-│    → JWT verification (protected routes) │
-│                                           │
-│  Controllers → Services                  │
-│    → bcrypt password hashing             │
-│    → JWT issuing / verification          │
-│                                           │
-│  User repository                         │
-│    → JSON file store (interface-based,   │
-│      swappable for MongoDB in Part 2)    │
-└─────────────────────────────────────────┘
-```
+![HustleHub+ Part 1 architecture](./architecture-diagram.svg)
 
 This is the MERN architecture at its Part 1 stage: the **E**xpress backend
 and **N**ode runtime exist now; the **R**eact frontend and **M**ongoDB
@@ -65,9 +45,9 @@ database are planned for Part 2 and will slot in behind the same
 
 | Method | Route | Auth required | Purpose |
 |---|---|---|---|
-| POST | `/api/auth/register` | No | Create a client or freelancer account |
-| POST | `/api/auth/login` | No | Authenticate, receive a JWT |
-| GET | `/api/auth/me` | Yes (Bearer JWT) | Return the caller's own profile |
+| POST | `/api/users/register` | No | Create a client or freelancer account |
+| POST | `/api/users/login` | No | Authenticate, receive a JWT |
+| GET | `/api/users/me` | Yes (Bearer JWT) | Return the caller's own profile |
 
 `/me` exists specifically to demonstrate that JWT protects routes *beyond*
 login, as required — a login endpoint alone doesn't prove the token is
@@ -125,6 +105,18 @@ would let an attacker discover which emails are registered.
 The registration schema only accepts `role: "client" | "freelancer"`.
 `"admin"` is rejected by validation — there is no way to self-register as
 an administrator through the public API.
+
+### Threat model summary
+
+| Threat | Control implemented |
+|---|---|
+| Credential stuffing | bcrypt hashing (cost 12), generic login error message |
+| User enumeration | Identical `401` for wrong password and unknown email |
+| Privilege escalation | `role` enum restricted to `client`/`freelancer` at registration |
+| Token theft / replay | Short-lived JWT (1h expiry), HTTPS-only transport |
+| Injection (SQL/NoSQL-style) | Zod schema validation on every input; no raw query construction |
+| Information disclosure via errors | Centralised handler — no stack traces, paths, or config values ever reach a response |
+| Sensitive data exposure | `passwordHash` stripped from every user object before it leaves the service layer |
 
 ## 5. Running it locally
 
@@ -194,6 +186,29 @@ covering:
 - Protected route (`/me`): no token, invalid token, valid token
 
 Import it into Postman, run the **Login — happy path** request first (it
+stores the returned token as a collection variable), then the rest of the
+collection can be run in any order.
+
+## 7. Screenshots
+
+| Scenario | |
+|---|---|
+| Register — success | ![Register success](./screenshots/part1/register-success.png) |
+| Register — validation error | ![Register validation error](./screenshots/part1/register-validation-error.png) |
+| Register — duplicate email | ![Register duplicate](./screenshots/part1/register-duplicate.png) |
+| Login — success (JWT returned) | ![Login success](./screenshots/part1/login-success.png) |
+| Login — invalid credentials | ![Login invalid](./screenshots/part1/login-invalid.png) |
+| Protected route — no token | ![Me no token](./screenshots/part1/me-no-token.png) |
+| Protected route — valid token | ![Me valid token](./screenshots/part1/me-valid-token.png) |
+
+## 8. Demonstration video
+
+**[https://youtu.be/89zbx3POLmk?si=kC4vUq3rHtApSozn]**
+
+[Part 1 demo video](https://youtu.be/89zbx3POLmk?si=kC4vUq3rHtApSozn)
+
+## 9. What's next (Part 2)
+ostman, run the **Login — happy path** request first (it
 stores the returned token as a collection variable), then the rest of the
 collection can be run in any order.
 

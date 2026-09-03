@@ -5,7 +5,7 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "https://localhost:5000/api/auth" },
+    { "key": "baseUrl", "value": "https://localhost:5000/api/users" },
     { "key": "token", "value": "" }
   ],
   "item": [
@@ -146,7 +146,7 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"nomvula@hustlehub.com\",\n  \"password\": \"WrongPassword!\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"zanele@hustlehub.com\",\n  \"password\": \"WrongPassword!\"\n}" },
             "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] }
           }
         }
@@ -178,7 +178,7 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer garbage.token.value" }],
+            "header": [{ "key": "Authorization", "value": "Bearer thisisnotarealtoken" }],
             "url": { "raw": "{{baseUrl}}/me", "host": ["{{baseUrl}}"], "path": ["me"] }
           }
         },
