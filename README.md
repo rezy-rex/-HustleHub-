@@ -1,4 +1,4 @@
-# HustleHub+ — Backend (Part 1: )
+# HustleHub+ — Backend (Part 1)
 
 APDS7311/w · INSY7314/w — Application Development Security POE
 
@@ -17,8 +17,7 @@ privilege escalation (see §4).
 
 ## 2. Architecture
 
-<img width="2880" height="2060" alt="HustleHub" src="https://github.com/user-attachments/assets/dbf3c022-7998-46dc-8d61-86f4e2a76d39" />
-
+<img width="2880" height="2060" alt="HustleHub+ Part 1 architecture" src="https://github.com/user-attachments/assets/dbf3c022-7998-46dc-8d61-86f4e2a76d39" />
 
 This is the MERN architecture at its Part 1 stage: the **E**xpress backend
 and **N**ode runtime exist now; the **R**eact frontend and **M**ongoDB
@@ -68,14 +67,14 @@ Error (never includes a stack trace, file path, or config value):
 
 ## 4. Security decisions
 
-**Password hashing — bcrypt (via `bcryptjs`), cost factor 12.**
+**Password hashing: bcrypt (via `bcryptjs`), cost factor 12.**
 Passwords are never stored, logged, or returned in any response — the API
 sanitises the `passwordHash` field out of every user object before it
 leaves the service layer. `bcryptjs` (a pure-JS implementation) was chosen
 over native `bcrypt` specifically because it avoids a native compile step,
 which matters once this API is built inside a Docker image in Part 3.
 
-**Authentication — JWT (`jsonwebtoken`), HS256, 1 hour expiry.**
+**Authentication: JWT (`jsonwebtoken`), HS256, 1 hour expiry.**
 The token payload is `{ sub: userId, role, iat, exp }`. `role` is included
 from Part 1 even though role-based access control isn't graded until
 Part 2, so the token format doesn't need to change later. The secret is
@@ -92,7 +91,7 @@ their intended status code and a safe message. Anything unexpected is
 logged server-side in full and returns a generic `500` to the client —
 internal details never reach the response body.
 
-**HTTPS — locally configured TLS certificate.**
+**HTTPS: locally configured TLS certificate.**
 The server refuses to start over plain HTTP. Certificates are generated
 locally per machine (see §5) and are gitignored — they are never
 committed, since a shared private key defeats the purpose of TLS.
@@ -194,34 +193,29 @@ collection can be run in any order.
 
 ### Screenshots of API responses
 
-Captured against the final `/api/users` routes and stored in
-[`screenshots/`](./screenshots/):
+Captured against the final `/api/users` routes over HTTPS, stored in
+[`screenshots/part1/`](./screenshots/part1/):
 
-| # | File | Shows |
-|---|------|-------|
-| 1 | `01-register-success.png` | `201` created — POST `/api/users/register` |
-| 2 | `02-register-duplicate-email.png` | `409` — email already registered |
-| 3 | `03-register-invalid-input.png` | `400` — validation rejects bad input |
-| 4 | `04-register-admin-role-rejected.png` | `400` — `role: "admin"` not self-assignable |
-| 5 | `05-login-success.png` | `200` — JWT returned on login |
-| 6 | `06-login-wrong-password.png` | `401` — generic invalid-credentials error |
-| 7 | `07-me-no-token.png` | `401` — protected route without a token |
-| 8 | `08-me-valid-token.png` | `200` — protected route with a Bearer JWT |
-| 9 | `09-https-certificate.png` | Browser padlock / certificate details for `https://localhost:5000` |
+| # | Screenshot | Shows |
+|---|-----------|-------|
+| 1 | [![01-register-success](screenshots/part1/01-register-success.png)](screenshots/part1/01-register-success.png) | `201` created — POST `/api/users/register` |
+| 2 | [![02-register-duplicate-email](screenshots/part1/02-register-duplicate-email.png)](screenshots/part1/02-register-duplicate-email.png) | `409` — email already registered |
+| 3 | [![03-register-invalid-input](screenshots/part1/03-register-invalid-input.png)](screenshots/part1/03-register-invalid-input.png) | `400` — validation rejects bad input |
+| 4 | [![04-register-admin-role-rejected](screenshots/part1/04-register-admin-role-rejected.png)](screenshots/part1/04-register-admin-role-rejected.png) | `400` — `role: "admin"` not self-assignable |
+| 5 | [![05-login-success](screenshots/part1/05-login-success.png)](screenshots/part1/05-login-success.png) | `200` — JWT returned on login |
+| 6 | [![06-login-wrong-password](screenshots/part1/06-login-wrong-password.png)](screenshots/part1/06-login-wrong-password.png) | `401` — generic invalid-credentials error |
+| 7 | [![07-me-no-token](screenshots/part1/07-me-no-token.png)](screenshots/part1/07-me-no-token.png) | `401` — protected route without a token |
+| 8 | [![08-me-valid-token](screenshots/part1/08-me-valid-token.png)](screenshots/part1/08-me-valid-token.png) | `200` — protected route with a Bearer JWT |
+| 9 | [![09-https-certificate](screenshots/part1/09-https-certificate.png)](screenshots/part1/09-https-certificate.png) | Browser padlock / certificate for `https://localhost:5000` |
 
+### Demonstration video
 
-## 8. Demonstration video
+A walkthrough showing the API running over HTTPS, user registration,
+login with JWT issuance, and the protected `/me` route:
 
-**[https://youtu.be/89zbx3POLmk?si=kC4vUq3rHtApSozn]**
+**[Part 1 demo video — YouTube](https://youtu.be/89zbx3POLmk)**
 
-[Part 1 demo video](https://youtu.be/89zbx3POLmk?si=kC4vUq3rHtApSozn)
-
-## 9. What's next (Part 2)
-ostman, run the **Login — happy path** request first (it
-stores the returned token as a collection variable), then the rest of the
-collection can be run in any order.
-
-## 7. What's next (Part 2)
+## 8. What's next (Part 2)
 
 - Swap `fileUserRepository` for a MongoDB-backed implementation behind the
   same `UserRepository` interface
