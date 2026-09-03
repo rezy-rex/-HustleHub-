@@ -17,7 +17,8 @@ privilege escalation (see §4).
 
 ## 2. Architecture
 
-![HustleHub+ Part 1 architecture](./architecture-diagram.svg)
+<img width="2880" height="2060" alt="HustleHub" src="https://github.com/user-attachments/assets/dbf3c022-7998-46dc-8d61-86f4e2a76d39" />
+
 
 This is the MERN architecture at its Part 1 stage: the **E**xpress backend
 and **N**ode runtime exist now; the **R**eact frontend and **M**ongoDB
@@ -189,17 +190,25 @@ Import it into Postman, run the **Login — happy path** request first (it
 stores the returned token as a collection variable), then the rest of the
 collection can be run in any order.
 
-## 7. Screenshots
+## 7. Evidence
 
-| Scenario | |
-|---|---|
-| Register — success | ![Register success](./screenshots/part1/register-success.png) |
-| Register — validation error | ![Register validation error](./screenshots/part1/register-validation-error.png) |
-| Register — duplicate email | ![Register duplicate](./screenshots/part1/register-duplicate.png) |
-| Login — success (JWT returned) | ![Login success](./screenshots/part1/login-success.png) |
-| Login — invalid credentials | ![Login invalid](./screenshots/part1/login-invalid.png) |
-| Protected route — no token | ![Me no token](./screenshots/part1/me-no-token.png) |
-| Protected route — valid token | ![Me valid token](./screenshots/part1/me-valid-token.png) |
+### Screenshots of API responses
+
+Captured against the final `/api/users` routes and stored in
+[`screenshots/`](./screenshots/):
+
+| # | File | Shows |
+|---|------|-------|
+| 1 | `01-register-success.png` | `201` created — POST `/api/users/register` |
+| 2 | `02-register-duplicate-email.png` | `409` — email already registered |
+| 3 | `03-register-invalid-input.png` | `400` — validation rejects bad input |
+| 4 | `04-register-admin-role-rejected.png` | `400` — `role: "admin"` not self-assignable |
+| 5 | `05-login-success.png` | `200` — JWT returned on login |
+| 6 | `06-login-wrong-password.png` | `401` — generic invalid-credentials error |
+| 7 | `07-me-no-token.png` | `401` — protected route without a token |
+| 8 | `08-me-valid-token.png` | `200` — protected route with a Bearer JWT |
+| 9 | `09-https-certificate.png` | Browser padlock / certificate details for `https://localhost:5000` |
+
 
 ## 8. Demonstration video
 
