@@ -1,4 +1,4 @@
-// OWNER: Odirile — REMOVE BEFORE COMMIT
+
 import { Router } from 'express';
 import { gigController } from './gig.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
