@@ -47,3 +47,4 @@ export const bookingService = {
     return bookingRepository.findByFreelancerId(freelancerId);
   },
 };
+//Update from part1
