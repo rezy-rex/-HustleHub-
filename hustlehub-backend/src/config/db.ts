@@ -1,4 +1,4 @@
-// OWNER: Sixolile — REMOVE BEFORE COMMIT
+
 import mongoose from 'mongoose';
 import { env } from './env';
 import { logger } from '../utils/logger';
