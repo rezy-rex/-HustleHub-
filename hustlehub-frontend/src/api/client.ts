@@ -1,4 +1,4 @@
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
+
 
 export interface User {
   id: string;
