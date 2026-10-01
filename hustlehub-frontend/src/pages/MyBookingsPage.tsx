@@ -1,4 +1,4 @@
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
+
 import React, { useEffect, useState } from 'react';
 import { Booking, bookingsApi, ApiError } from '../api/client';
 import { Link } from 'react-router-dom';
