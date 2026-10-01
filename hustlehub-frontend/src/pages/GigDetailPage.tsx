@@ -1,4 +1,4 @@
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Gig, gigsApi, bookingsApi, ApiError, DEFAULT_CATEGORY_IMAGES } from '../api/client';
