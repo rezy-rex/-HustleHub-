@@ -2,13 +2,20 @@ import https from 'https';
 import app from './app';
 import { env } from './config/env';
 import { loadHttpsOptions } from './config/https';
+import { connectDB } from './config/db';
 import { logger } from './utils/logger';
 
-const httpsOptions = loadHttpsOptions();
+async function startServer(): Promise<void> {
+  const httpsOptions = loadHttpsOptions();
 
-https.createServer(httpsOptions, app).listen(env.PORT, () => {
-  logger.info(`HustleHub+ API listening on https://localhost:${env.PORT}`);
-});
+  await connectDB();
+
+  https.createServer(httpsOptions, app).listen(env.PORT, () => {
+    logger.info(`HustleHub+ API listening on https://localhost:${env.PORT}`);
+  });
+}
+
+startServer();
 
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled promise rejection', reason);

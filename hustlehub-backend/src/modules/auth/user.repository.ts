@@ -1,10 +1,9 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { randomUUID } from 'crypto';
+import mongoose, { Schema } from 'mongoose';
 
 export interface User {
   id: string;
   email: string;
+  name?: string;
   passwordHash: string;
   role: 'client' | 'freelancer' | 'admin';
   createdAt: string;
@@ -16,49 +15,79 @@ export interface UserRepository {
   create(user: Omit<User, 'id' | 'createdAt'>): Promise<User>;
 }
 
-const DATA_FILE = path.resolve(process.cwd(), 'src/data/users.json');
+interface IUserDocument {
+  _id: mongoose.Types.ObjectId;
+  email: string;
+  name?: string;
+  passwordHash: string;
+  role: 'client' | 'freelancer' | 'admin';
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-async function readAll(): Promise<User[]> {
-  try {
-    const raw = await fs.readFile(DATA_FILE, 'utf-8');
-    return JSON.parse(raw) as User[];
-  } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-      await fs.writeFile(DATA_FILE, '[]', 'utf-8');
-      return [];
-    }
-    throw err;
+const userSchema = new Schema<IUserDocument>(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    name: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    passwordHash: {
+      type: String,
+      required: true,
+    },
+    role: {
+      type: String,
+      enum: ['client', 'freelancer', 'admin'],
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
   }
+);
+
+const UserModel = mongoose.models.User || mongoose.model<IUserDocument>('User', userSchema);
+
+function toUser(doc: IUserDocument): User {
+  return {
+    id: doc._id.toString(),
+    email: doc.email,
+    name: doc.name || doc.email.split('@')[0],
+    passwordHash: doc.passwordHash,
+    role: doc.role,
+    createdAt: doc.createdAt.toISOString(),
+  };
 }
 
-async function writeAll(users: User[]): Promise<void> {
-  await fs.writeFile(DATA_FILE, JSON.stringify(users, null, 2), 'utf-8');
-}
-
-// File-based store for Part 1 (permitted by the brief). Swappable for a
-// MongoDB-backed implementation in Part 2 without touching any code outside
-// this file — every other module only depends on the UserRepository interface.
-export const fileUserRepository: UserRepository = {
+export const userRepository: UserRepository = {
   async findByEmail(email: string): Promise<User | null> {
-    const users = await readAll();
-    return users.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
+    const doc = await UserModel.findOne({ email: email.toLowerCase().trim() }).exec();
+    return doc ? toUser(doc) : null;
   },
 
   async findById(id: string): Promise<User | null> {
-    const users = await readAll();
-    return users.find((u) => u.id === id) ?? null;
+    if (!mongoose.isValidObjectId(id)) {
+      return null;
+    }
+    const doc = await UserModel.findById(id).exec();
+    return doc ? toUser(doc) : null;
   },
 
   async create(user: Omit<User, 'id' | 'createdAt'>): Promise<User> {
-    const users = await readAll();
-    const newUser: User = {
-      ...user,
-      id: randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    users.push(newUser);
-    await writeAll(users);
-    return newUser;
+    const doc = await UserModel.create({
+      email: user.email.toLowerCase().trim(),
+      name: user.name || user.email.split('@')[0],
+      passwordHash: user.passwordHash,
+      role: user.role,
+    });
+    return toUser(doc);
   },
 };

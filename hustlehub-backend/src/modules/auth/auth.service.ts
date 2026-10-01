@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
 import { AppError } from '../../utils/AppError';
-import { fileUserRepository, User } from './user.repository';
+import { userRepository, User } from './user.repository';
 
 const SALT_ROUNDS = 12;
 
@@ -13,18 +13,18 @@ function sanitize(user: User) {
 
 export const authService = {
   async register(email: string, password: string, role: 'client' | 'freelancer') {
-    const existing = await fileUserRepository.findByEmail(email);
+    const existing = await userRepository.findByEmail(email);
     if (existing) {
       throw new AppError('Email is already registered', 409, 'AUTH_EMAIL_TAKEN');
     }
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-    const user = await fileUserRepository.create({ email, passwordHash, role });
+    const user = await userRepository.create({ email, passwordHash, role });
     return sanitize(user);
   },
 
   async login(email: string, password: string) {
-    const user = await fileUserRepository.findByEmail(email);
+    const user = await userRepository.findByEmail(email);
 
     // Same generic error whether the email doesn't exist or the password is
     // wrong — prevents this endpoint being used to enumerate registered
@@ -47,7 +47,7 @@ export const authService = {
   },
 
   async getById(id: string) {
-    const user = await fileUserRepository.findById(id);
+    const user = await userRepository.findById(id);
     if (!user) {
       throw new AppError('User not found', 404, 'USER_NOT_FOUND');
     }

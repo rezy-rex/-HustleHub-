@@ -10,6 +10,7 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('1h'),
   HTTPS_KEY_PATH: z.string().default('./certs/localhost-key.pem'),
   HTTPS_CERT_PATH: z.string().default('./certs/localhost.pem'),
+  MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
 });
 
 const parsed = envSchema.safeParse(process.env);

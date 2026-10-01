@@ -106,17 +106,28 @@ The registration schema only accepts `role: "client" | "freelancer"`.
 `"admin"` is rejected by validation — there is no way to self-register as
 an administrator through the public API.
 
+**Content-Security-Policy (CSP) & Helmet HTTP headers.**
+Helmet is configured with an explicit Content Security Policy tailored specifically for an API-only service. Because this backend solely serves JSON payloads and never delivers HTML documents, client scripts, stylesheets, or images, the CSP strictly sets `default-src 'self'` and completely disables active resource loading by setting `'none'` for `script-src`, `style-src`, `img-src`, `object-src`, `frame-ancestors`, and `form-action`, whilst maintaining `connect-src 'self'`. This deliberately eliminates cross-site scripting (XSS), clickjacking, and content injection vectors at the HTTP transport boundary rather than relying on permissive default HTML policies.
+
+**NoSQL injection sanitisation — express-mongo-sanitize.**
+All incoming request payloads (`req.body`, `req.query`, and `req.params`) are sanitized globally before any route handlers execute. This strips any keys containing MongoDB `$`-operators or `.` characters, preventing NoSQL operator injection attacks (e.g. `{"$gt": ""}`) from bypassing authentication or querying unauthorized records.
+
+**Rate limiting — express-rate-limit.**
+Authentication routes (`POST /api/users/login` and `POST /api/users/register`) are throttled to 5 requests per 15 minutes per IP to defeat automated credential stuffing and brute-force attacks. Booking creation (`POST /api/bookings`) is limited to 10 requests per 15 minutes per IP to guard against booking spam and transaction flooding. When a limit is breached, the API returns HTTP 429 with `{ success: false, error: { message: "...", code: "RATE_LIMITED" } }`.
+
 ### Threat model summary
 
 | Threat | Control implemented |
 |---|---|
-| Credential stuffing | bcrypt hashing (cost 12), generic login error message |
+| Credential stuffing & brute-force | bcrypt hashing (cost 12), generic login error message, express-rate-limit (5 req / 15 min) |
 | User enumeration | Identical `401` for wrong password and unknown email |
 | Privilege escalation | `role` enum restricted to `client`/`freelancer` at registration |
 | Token theft / replay | Short-lived JWT (1h expiry), HTTPS-only transport |
-| Injection (SQL/NoSQL-style) | Zod schema validation on every input; no raw query construction |
+| Injection (SQL/NoSQL-style) | Zod schema validation on every input; express-mongo-sanitize strips `$` and `.` operators |
 | Information disclosure via errors | Centralised handler — no stack traces, paths, or config values ever reach a response |
 | Sensitive data exposure | `passwordHash` stripped from every user object before it leaves the service layer |
+| XSS / Clickjacking / MIME-sniffing | Helmet with custom API-tailored CSP (`script-src 'none'`, `frame-ancestors 'none'`) |
+| Resource flooding / booking spam | Rate limiting on booking creation (10 req / 15 min) |
 
 ## 5. Running it locally
 
