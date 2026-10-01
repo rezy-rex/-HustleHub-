@@ -79,16 +79,46 @@ export const RegisterPage: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="role">Account Type</label>
-            <select
-              id="role"
-              className="form-select"
-              value={role}
-              onChange={(e) => setRole(e.target.value as 'client' | 'freelancer')}
-            >
-              <option value="client">Client — I want to hire & book gigs</option>
-              <option value="freelancer">Freelancer — I want to offer services</option>
-            </select>
+            <label className="form-label" style={{ marginBottom: '0.5rem' }}>Select Account Type</label>
+            <div className="role-cards-grid">
+              <button
+                type="button"
+                onClick={() => setRole('client')}
+                className={`role-card ${role === 'client' ? 'active' : ''}`}
+                data-testid="role-card-client"
+              >
+                <div className="role-card-header">
+                  <span className="role-card-icon" role="img" aria-label="client">💼</span>
+                  <span className="role-card-radio" />
+                </div>
+                <div className="role-card-title">Client</div>
+                <div className="role-card-desc">
+                  I want to browse marketplace services, hire verified talent, and book gigs.
+                </div>
+                {role === 'client' && (
+                  <span className="role-card-badge">Selected</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRole('freelancer')}
+                className={`role-card ${role === 'freelancer' ? 'active' : ''}`}
+                data-testid="role-card-freelancer"
+              >
+                <div className="role-card-header">
+                  <span className="role-card-icon" role="img" aria-label="freelancer">🚀</span>
+                  <span className="role-card-radio" />
+                </div>
+                <div className="role-card-title">Freelancer</div>
+                <div className="role-card-desc">
+                  I want to list my professional skills, publish gigs, and earn income in Rands.
+                </div>
+                {role === 'freelancer' && (
+                  <span className="role-card-badge">Selected</span>
+                )}
+              </button>
+            </div>
           </div>
 
           <button

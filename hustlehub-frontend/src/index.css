@@ -254,7 +254,7 @@ button {
 
 /* Auth Pages */
 .auth-wrapper {
-  max-width: 440px;
+  max-width: 520px;
   margin: 3rem auto;
 }
 
@@ -415,4 +415,117 @@ button {
   gap: 1rem;
   margin: 1.25rem 0;
 }
+
+/* Register Role Selection Cards */
+.role-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 480px) {
+  .role-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.role-card {
+  position: relative;
+  background-color: var(--surface-card);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.role-card:hover {
+  border-color: #fdba74;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+
+.role-card.active {
+  border-color: var(--primary-orange);
+  background-color: #fffaf5;
+  box-shadow: 0 0 0 3px rgba(240, 90, 40, 0.15);
+}
+
+.role-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.role-card-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.role-card-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background-color: white;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.role-card.active .role-card-radio {
+  border-color: var(--primary-orange);
+  background-color: var(--primary-orange);
+}
+
+.role-card.active .role-card-radio::after {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: white;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.role-card-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--primary-navy);
+  margin-bottom: 0.25rem;
+}
+
+.role-card.active .role-card-title {
+  color: var(--primary-orange);
+}
+
+.role-card-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  flex: 1;
+}
+
+.role-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #c2410c;
+  background-color: #ffedd5;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
 

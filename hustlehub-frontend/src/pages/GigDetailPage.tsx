@@ -199,7 +199,7 @@ export const GigDetailPage: React.FC = () => {
 
             {role === 'freelancer' && (
               <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                (You are logged in as a Freelancer — login as a Client to book gigs)
+                (You are logged in as a Freelancer. Log in as a Client to book gigs)
               </span>
             )}
 

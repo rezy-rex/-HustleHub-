@@ -225,7 +225,7 @@ export const MyGigsPage: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="new-cover">
-                Cover Image URL (optional — leave blank for curated category stock photo)
+                Cover Image URL (optional, leave blank for curated category stock photo)
               </label>
               <input
                 id="new-cover"
