@@ -1,4 +1,3 @@
-// OWNER: ME — REMOVE BEFORE COMMIT
 import helmet from 'helmet';
 
 export const helmetSecurity = helmet({
