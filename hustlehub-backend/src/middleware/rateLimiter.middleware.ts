@@ -1,4 +1,3 @@
-// OWNER: ME — REMOVE BEFORE COMMIT
 import rateLimit from 'express-rate-limit';
 
 export const authRateLimiter = rateLimit({
