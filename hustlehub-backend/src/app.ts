@@ -27,7 +27,7 @@ app.use('/api/gigs', gigRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/transactions', transactionRoutes);
 
-// Order matters: 404 handler, then the error handler, always last.
+// Order matters: 404 handler, then the error handler, always last..
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
