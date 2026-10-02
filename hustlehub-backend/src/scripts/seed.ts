@@ -1,4 +1,3 @@
-// OWNER: ME — REMOVE BEFORE COMMIT
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '../config/db';
