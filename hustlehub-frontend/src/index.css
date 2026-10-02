@@ -463,8 +463,20 @@ button {
 }
 
 .role-card-icon {
-  font-size: 1.5rem;
-  line-height: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+  color: var(--primary-navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.role-card.active .role-card-icon {
+  background-color: #ffedd5;
+  color: var(--primary-orange);
 }
 
 .role-card-radio {
