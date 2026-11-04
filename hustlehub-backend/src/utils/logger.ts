@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 type LogLevel = 'info' | 'warn' | 'error';
 
 function log(level: LogLevel, message: string, meta?: unknown): void {
@@ -20,3 +22,30 @@ export const logger = {
   warn: (message: string, meta?: unknown) => log('warn', message, meta),
   error: (message: string, meta?: unknown) => log('error', message, meta),
 };
+
+export function logEvent(
+  event: string,
+  fields?: Record<string, unknown>,
+  level: 'info' | 'warn' | 'error' = 'info'
+): void {
+  const payload = {
+    time: new Date().toISOString(),
+    level,
+    event,
+    message: typeof fields?.message === 'string' ? fields.message : event,
+    ...fields,
+  };
+  process.stdout.write(JSON.stringify(payload) + '\n');
+}
+
+export function setLogContext(_fields: Record<string, unknown>): void {
+  // no-op for now
+}
+
+export function hashEmail(email: string): string {
+  return crypto
+    .createHash('sha256')
+    .update(email.trim().toLowerCase())
+    .digest('hex')
+    .slice(0, 16);
+}

@@ -3,7 +3,12 @@ import { z } from 'zod';
 
 dotenv.config();
 
-const envSchema = z.object({
+const optionalString = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.string().optional()
+);
+
+export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(5000),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
@@ -11,6 +16,24 @@ const envSchema = z.object({
   HTTPS_KEY_PATH: z.string().default('./certs/localhost-key.pem'),
   HTTPS_CERT_PATH: z.string().default('./certs/localhost.pem'),
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
+  LOG_LEVEL: z.string().default('info'),
+  AXIOM_TOKEN: optionalString,
+  AXIOM_DATASET: optionalString,
+  AXIOM_URL: optionalString,
+  LOGIN_MAX_FAILURES: z.coerce.number().int().positive().default(3),
+  LOCKOUT_MINUTES: z.coerce.number().int().positive().default(15),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  BOOKING_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  CORS_ORIGINS: z
+    .string()
+    .default('http://localhost:5173,http://127.0.0.1:5173')
+    .transform((val) =>
+      val
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    ),
+  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 });
 
 const parsed = envSchema.safeParse(process.env);

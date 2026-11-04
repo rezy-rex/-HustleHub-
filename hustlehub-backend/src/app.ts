@@ -1,8 +1,9 @@
 import express from 'express';
-import morgan from 'morgan';
 import cors from 'cors';
 import mongoSanitize from 'express-mongo-sanitize';
+import { env } from './config/env';
 import { helmetSecurity } from './config/security';
+import { requestLogger } from './middleware/requestLogger.middleware';
 import authRoutes from './modules/auth/auth.routes';
 import gigRoutes from './modules/gigs/gig.routes';
 import bookingRoutes from './modules/bookings/booking.routes';
@@ -11,16 +12,22 @@ import { errorMiddleware, notFoundMiddleware } from './middleware/error.middlewa
 
 const app = express();
 
+if (env.TRUST_PROXY > 0) {
+  app.set('trust proxy', env.TRUST_PROXY);
+}
+
+app.use(requestLogger);
 app.use(helmetSecurity);
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: env.CORS_ORIGINS,
     credentials: true,
   })
 );
 app.use(express.json());
 app.use(mongoSanitize());
-app.use(morgan('dev'));
+
+app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
 
 app.use('/api/users', authRoutes);
 app.use('/api/gigs', gigRoutes);

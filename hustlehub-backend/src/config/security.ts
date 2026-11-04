@@ -1,4 +1,5 @@
 import helmet from 'helmet';
+import { env } from './env';
 
 export const helmetSecurity = helmet({
   contentSecurityPolicy: {
@@ -7,7 +8,7 @@ export const helmetSecurity = helmet({
       scriptSrc: ["'none'"],
       styleSrc: ["'none'"],
       imgSrc: ["'none'"],
-      connectSrc: ["'self'", "http://localhost:5173", "http://127.0.0.1:5173"],
+      connectSrc: ["'self'", ...env.CORS_ORIGINS],
       frameAncestors: ["'none'"],
       objectSrc: ["'none'"],
       formAction: ["'none'"],
