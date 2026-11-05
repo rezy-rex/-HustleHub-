@@ -1,4 +1,3 @@
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, authApi } from '../api/client';
 

@@ -1,4 +1,3 @@
-// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { transactionRepository, Transaction } from './transaction.repository';
 import { buildTaxSummary, TaxSummary } from './tax.service';
 

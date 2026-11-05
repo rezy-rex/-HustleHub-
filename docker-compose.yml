@@ -1,0 +1,47 @@
+# HustleHub+ Production-like Compose Stack
+# Secrets policy: NEVER put JWT_SECRET, MONGODB_URI, or AXIOM_* credentials in this file.
+# Sensitive values are loaded strictly from the gitignored ./hustlehub-backend/.env file.
+
+services:
+  api:
+    build:
+      context: ./hustlehub-backend
+      dockerfile: Dockerfile
+    image: hustlehub-api
+    # Port 5000 is published to the host specifically so that Postman and Newman test
+    # suites can execute integration and rate-limiting tests directly against the API.
+    # In a real external production deployment, only the reverse proxy (port 8080) would be exposed.
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    env_file:
+      - path: ./hustlehub-backend/.env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      HTTPS_KEY_PATH: ./certs/localhost-key.pem
+      HTTPS_CERT_PATH: ./certs/localhost.pem
+      CORS_ORIGINS: http://localhost:8080
+      # TRUST_PROXY: set to 1 because Nginx acts as the single trusted reverse-proxy hop
+      # forwarding requests and overwriting X-Forwarded-For with the true client IP.
+      TRUST_PROXY: "1"
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-5}
+      BOOKING_RATE_LIMIT_MAX: ${BOOKING_RATE_LIMIT_MAX:-10}
+    volumes:
+      - ./certs/docker/api.key:/app/certs/localhost-key.pem:ro
+      - ./certs/docker/api.crt:/app/certs/localhost.pem:ro
+
+  client:
+    build:
+      context: ./hustlehub-frontend
+      dockerfile: Dockerfile
+    image: hustlehub-client
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./certs/docker/api.crt:/etc/nginx/certs/api.crt:ro

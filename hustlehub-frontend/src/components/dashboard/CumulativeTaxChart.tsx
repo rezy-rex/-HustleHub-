@@ -1,4 +1,3 @@
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React from 'react';
 import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { formatZAR } from '../../utils/currency';

@@ -1,5 +1,3 @@
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
 export interface User {
   id: string;
   email: string;

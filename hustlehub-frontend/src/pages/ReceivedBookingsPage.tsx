@@ -1,4 +1,3 @@
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React, { useEffect, useState } from 'react';
 import { Booking, Transaction, bookingsApi, transactionsApi, ApiError } from '../api/client';
 import { formatZAR } from '../utils/currency';

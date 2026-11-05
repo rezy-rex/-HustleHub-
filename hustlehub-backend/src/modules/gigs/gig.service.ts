@@ -1,4 +1,3 @@
-// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { gigRepository, Gig } from './gig.repository';
 import { userRepository } from '../auth/user.repository';
 import { CreateGigInput, UpdateGigInput } from './gig.schema';

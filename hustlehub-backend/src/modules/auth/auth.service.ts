@@ -1,4 +1,3 @@
-// OWNER: Sixolile — REMOVE BEFORE COMMIT
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
@@ -10,6 +9,7 @@ const SALT_ROUNDS = 12;
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync('dummy-password-not-used-for-login', 4);
 
 function sanitize(user: User) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Destructuring strips passwordHash from user object before returning to clients
   const { passwordHash, ...safe } = user;
   return safe;
 }

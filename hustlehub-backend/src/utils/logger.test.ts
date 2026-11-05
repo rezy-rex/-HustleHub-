@@ -1,4 +1,3 @@
-// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { Writable } from 'stream';
 import { describe, expect, it } from 'vitest';
 import { createLogger, hashEmail, logEvent, runWithLogContext } from './logger';

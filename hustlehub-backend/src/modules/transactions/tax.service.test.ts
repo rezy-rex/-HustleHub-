@@ -1,4 +1,3 @@
-// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { describe, expect, it } from 'vitest';
 import { buildTaxSummary, calculateTax, getTaxYear } from './tax.service';
 

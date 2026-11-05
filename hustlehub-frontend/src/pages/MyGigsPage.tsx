@@ -1,4 +1,3 @@
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React, { useEffect, useState } from 'react';
 import { Gig, gigsApi, ApiError, DEFAULT_CATEGORY_IMAGES } from '../api/client';
 import { formatZAR } from '../utils/currency';

@@ -1,4 +1,3 @@
-// OWNER: Sixolile — REMOVE BEFORE COMMIT
 import mongoose, { Schema } from 'mongoose';
 
 export interface User {

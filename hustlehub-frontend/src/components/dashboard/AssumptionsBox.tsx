@@ -1,4 +1,3 @@
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React from 'react';
 
 export const AssumptionsBox: React.FC<{ assumptions: string[] }> = ({ assumptions }) => (

@@ -1,4 +1,3 @@
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React from 'react';
 import { formatPercent, formatZAR } from '../../utils/currency';
 

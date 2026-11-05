@@ -1,4 +1,3 @@
-// OWNER: Sixolile — REMOVE BEFORE COMMIT
 import { Router } from 'express';
 import { authController } from './auth.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';

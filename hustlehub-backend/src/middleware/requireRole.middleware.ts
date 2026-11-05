@@ -1,4 +1,3 @@
-// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { Request, Response, NextFunction } from 'express';
 import { logEvent } from '../utils/logger';
 import { AppError } from '../utils/AppError';

@@ -1,0 +1,23 @@
+# HustleHub+ CI and Local Newman Compose Override
+# Provides an ephemeral MongoDB service with no secrets or external cloud dependencies.
+
+services:
+  mongo:
+    image: mongo:7.0.14
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/hustlehub
+      JWT_SECRET: ${CI_JWT_SECRET:?set CI_JWT_SECRET}
+      AXIOM_TOKEN: ""
+      AXIOM_DATASET: ""
+      LOG_LEVEL: warn

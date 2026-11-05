@@ -1,4 +1,3 @@
-// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React from 'react';
 
 interface SummaryCardProps { label: string; value: string; }

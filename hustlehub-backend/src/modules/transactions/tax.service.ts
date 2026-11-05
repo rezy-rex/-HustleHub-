@@ -1,4 +1,3 @@
-// OWNER: Odirile — REMOVE BEFORE COMMIT
 export interface TaxYear {
   startYear: number;
   label: string;
@@ -67,11 +66,13 @@ export function calculateTax(income: number, startYear: number): {
   bracketIndex: number;
   nextBracket: { threshold: number; remaining: number; rate: number } | null;
 } {
+  // eslint-disable-next-line security/detect-object-injection -- startYear is calculated safely from UTC date year
   const table = TAX_TABLES[startYear] ?? TAX_TABLES[Math.max(...Object.keys(TAX_TABLES).map(Number))];
   const safeIncome = Math.max(0, Number.isFinite(income) ? income : 0);
   let bracketIndex = table.findIndex((bracket) => safeIncome <= bracket.upTo);
   if (bracketIndex < 0) bracketIndex = table.length - 1;
 
+  // eslint-disable-next-line security/detect-object-injection -- bracketIndex is a bounded numeric array index from findIndex
   const bracket = table[bracketIndex];
   const lowerBound = getLowerBound(table, bracketIndex);
   const rawTax = bracket.baseTax + (safeIncome - lowerBound) * bracket.rate - REBATE;
@@ -96,6 +97,7 @@ export function buildTaxSummary(
   const taxYear = getTaxYear(now);
   let tableStartYear = taxYear.startYear;
   let fallbackAssumption = '';
+  // eslint-disable-next-line security/detect-object-injection -- tableStartYear is an integer year derived from UTC date
   if (!TAX_TABLES[tableStartYear]) {
     tableStartYear = Math.max(...Object.keys(TAX_TABLES).map(Number));
     fallbackAssumption = `SARS tables for ${taxYear.label} are not loaded yet; the latest available tables are used.`;

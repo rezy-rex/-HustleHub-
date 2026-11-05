@@ -1,4 +1,3 @@
-// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { NextFunction, Request, Response } from 'express';
 import { AppError } from '../utils/AppError';
 import { logEvent } from '../utils/logger';
@@ -13,6 +12,7 @@ export function notFoundMiddleware(req: Request, res: Response): void {
 // Express recognises this as error-handling middleware specifically because
 // it takes 4 arguments — `next` must stay in the signature even though it's
 // only used implicitly (Express calls this instead of a route handler).
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Express error middleware contract requires 4-argument signature (err, req, res, next)
 export function errorMiddleware(err: unknown, req: Request, res: Response, next: NextFunction): void {
   if (err instanceof AppError) {
     res.status(err.statusCode).json({

@@ -1,4 +1,3 @@
-// OWNER: Sixolile — REMOVE BEFORE COMMIT
 import { NextFunction, Request, Response } from 'express';
 import { authService } from './auth.service';
 

@@ -1,4 +1,3 @@
-// OWNER: Odirile — REMOVE BEFORE COMMIT
 import crypto from 'crypto';
 import { AsyncLocalStorage } from 'async_hooks';
 import pino, { DestinationStream, Logger as PinoLogger } from 'pino';
@@ -35,8 +34,10 @@ function redactForCapture(value: unknown): unknown {
   const result: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
     if (/^(password|passwordHash|token|authorization)$/i.test(key) || key.endsWith('.password') || key.endsWith('.passwordHash') || key.endsWith('.token')) {
+      // eslint-disable-next-line security/detect-object-injection -- key is derived from Object.entries during log redaction
       result[key] = '[REDACTED]';
     } else {
+      // eslint-disable-next-line security/detect-object-injection -- key is derived from Object.entries during log redaction
       result[key] = redactForCapture(child);
     }
   }
@@ -57,7 +58,7 @@ export function createLogger(destination?: DestinationStream): {
           dataset: env.AXIOM_DATASET,
           token: env.AXIOM_TOKEN,
           axiomClient: 'hustlehub-api/1.0',
-          onError: (_error: Error) => undefined,
+          onError: () => undefined,
         };
         if (env.AXIOM_URL) {
           axiomOptions.url = env.AXIOM_URL;
@@ -119,7 +120,9 @@ export function createLogger(destination?: DestinationStream): {
       destination.write(JSON.stringify(line));
       return;
     }
+    // eslint-disable-next-line security/detect-object-injection -- level is constrained to LogLevel ('info' | 'warn' | 'error')
     if (Object.keys(payload).length > 0) root[level](payload, message);
+    // eslint-disable-next-line security/detect-object-injection -- level is constrained to LogLevel ('info' | 'warn' | 'error')
     else root[level](message);
   }
 
@@ -161,6 +164,7 @@ export function logEvent(
   fields?: Record<string, unknown>,
   level: LogLevel = 'info'
 ): void {
+  // eslint-disable-next-line security/detect-object-injection -- level is constrained to LogLevel ('info' | 'warn' | 'error')
   activeLogger[level](event, { ...currentContext(), ...fields });
 }
 

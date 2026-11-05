@@ -25,7 +25,7 @@ async function seed() {
   const createdUsers: Record<string, string> = {};
 
   for (const u of testUsers) {
-    let existing = await userRepository.findByEmail(u.email);
+    const existing = await userRepository.findByEmail(u.email);
     if (!existing) {
       const created = await userRepository.create({
         name: u.name,

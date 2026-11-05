@@ -1,4 +1,3 @@
-// OWNER: Sixolile — REMOVE BEFORE COMMIT
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import type { NextFunction, Request, Response } from 'express';

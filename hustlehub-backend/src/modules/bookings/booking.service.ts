@@ -1,4 +1,3 @@
-// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { bookingRepository, Booking } from './booking.repository';
 import { gigRepository } from '../gigs/gig.repository';
 import { userRepository } from '../auth/user.repository';

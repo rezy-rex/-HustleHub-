@@ -1,4 +1,3 @@
-// OWNER: Odirile — REMOVE BEFORE COMMIT
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import pinoHttp from 'pino-http';
