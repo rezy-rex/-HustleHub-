@@ -1,3 +1,4 @@
+// OWNER: Sixolile — REMOVE BEFORE COMMIT
 import { Router } from 'express';
 import { authController } from './auth.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
@@ -13,5 +14,6 @@ router.post('/login', authRateLimiter, validate(LoginSchema), authController.log
 // Protected route — demonstrates JWT enforcement beyond login, as the
 // rubric specifically requires.
 router.get('/me', authMiddleware, authController.me);
+router.post('/logout', authMiddleware, authController.logout);
 
 export default router;

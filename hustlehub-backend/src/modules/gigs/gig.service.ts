@@ -1,7 +1,9 @@
+// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { gigRepository, Gig } from './gig.repository';
 import { userRepository } from '../auth/user.repository';
 import { CreateGigInput, UpdateGigInput } from './gig.schema';
 import { AppError } from '../../utils/AppError';
+import { logEvent } from '../../utils/logger';
 
 export const gigService = {
   async createGig(freelancerId: string, data: CreateGigInput): Promise<Gig> {
@@ -39,6 +41,7 @@ export const gigService = {
       throw new AppError('Gig not found', 404, 'GIG_NOT_FOUND');
     }
     if (gig.freelancerId !== freelancerId) {
+      logEvent('authz.denied', { reason: 'not_owner', gigId: gig.id }, 'warn');
       throw new AppError('You do not have permission to update this gig', 403, 'NOT_GIG_OWNER');
     }
 
@@ -55,6 +58,7 @@ export const gigService = {
       throw new AppError('Gig not found', 404, 'GIG_NOT_FOUND');
     }
     if (gig.freelancerId !== freelancerId) {
+      logEvent('authz.denied', { reason: 'not_owner', gigId: gig.id }, 'warn');
       throw new AppError('You do not have permission to delete this gig', 403, 'NOT_GIG_OWNER');
     }
 

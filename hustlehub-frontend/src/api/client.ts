@@ -1,5 +1,5 @@
-
-
+// OWNER: Lesedi — REMOVE BEFORE COMMIT
+// OWNER: Lesedi — REMOVE BEFORE COMMIT
 export interface User {
   id: string;
   email: string;
@@ -66,6 +66,20 @@ export interface MyTransactionsResponse {
   totalIncome: number;
 }
 
+export interface TaxSummary {
+  taxYear: { label: string; start: string; end: string };
+  grossIncome: number;
+  estimatedTax: number;
+  netIncome: number;
+  effectiveRate: number;
+  marginalRate: number;
+  rebate: number;
+  taxFreeThreshold: number;
+  nextBracket: { threshold: number; remaining: number; rate: number } | null;
+  monthly: Array<{ month: string; gross: number; cumulativeGross: number; cumulativeTax: number }>;
+  assumptions: string[];
+}
+
 export class ApiError extends Error {
   public readonly code: string;
   public readonly status: number;
@@ -101,7 +115,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   if (!isAuthEndpoint) {
     const token = localStorage.getItem('token');
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers['Authorization'] = 'Bearer ' + token;
     }
   }
 
@@ -116,9 +130,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw new ApiError(message, 'NETWORK_ERROR', 0);
   }
 
-  let json: ApiResponse<T> | null = null;
+  let json: ApiResponse<T> | null;
   try {
-    json = await res.json();
+    json = await res.json() as ApiResponse<T>;
   } catch {
     json = null;
   }
@@ -149,6 +163,10 @@ export const authApi = {
 
   async getMe(): Promise<{ user: User }> {
     return request<{ user: User }>('/users/me');
+  },
+
+  async logout(): Promise<void> {
+    return request<void>('/users/logout', { method: 'POST' });
   },
 };
 
@@ -221,5 +239,9 @@ export const bookingsApi = {
 export const transactionsApi = {
   async listMine(): Promise<MyTransactionsResponse> {
     return request<MyTransactionsResponse>('/transactions/mine');
+  },
+
+  async getTaxSummary(): Promise<TaxSummary> {
+    return request<TaxSummary>('/transactions/tax-summary');
   },
 };

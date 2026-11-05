@@ -1,8 +1,8 @@
-
+// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React, { useEffect, useState } from 'react';
 import { Booking, bookingsApi, ApiError } from '../api/client';
 import { Link } from 'react-router-dom';
-import { formatRands } from '../utils/format';
+import { formatZAR } from '../utils/currency';
 
 export const MyBookingsPage: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -88,7 +88,7 @@ export const MyBookingsPage: React.FC = () => {
               <div style={{ textAlign: 'right' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Amount Paid</span>
                 <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary-orange)' }}>
-                  {formatRands(booking.gigSnapshot.price)}
+                  {formatZAR(booking.gigSnapshot.price)}
                 </div>
               </div>
             </div>

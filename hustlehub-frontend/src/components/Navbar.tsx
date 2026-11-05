@@ -1,4 +1,4 @@
-
+// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -7,8 +7,8 @@ export const Navbar: React.FC = () => {
   const { user, role, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -34,7 +34,10 @@ export const Navbar: React.FC = () => {
               )}
 
               {role === 'freelancer' && (
-                <>
+                <> 
+                  <NavLink to="/dashboard" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    Dashboard
+                  </NavLink>
                   <NavLink to="/my-gigs" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     My Gigs
                   </NavLink>

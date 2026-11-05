@@ -1,4 +1,4 @@
-
+// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -12,6 +12,7 @@ import { GigDetailPage } from './pages/GigDetailPage';
 import { MyGigsPage } from './pages/MyGigsPage';
 import { MyBookingsPage } from './pages/MyBookingsPage';
 import { ReceivedBookingsPage } from './pages/ReceivedBookingsPage';
+import { DashboardPage } from './pages/DashboardPage';
 
 export const App: React.FC = () => {
   return (
@@ -49,6 +50,14 @@ export const App: React.FC = () => {
                 element={
                   <ProtectedRoute allowedRoles={['freelancer']}>
                     <MyGigsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['freelancer']}>
+                    <DashboardPage />
                   </ProtectedRoute>
                 }
               />

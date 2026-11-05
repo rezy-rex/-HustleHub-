@@ -1,4 +1,4 @@
-
+// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, authApi } from '../api/client';
 
@@ -10,7 +10,7 @@ interface AuthContextType {
   loading: boolean;
   login: (credentials: { email: string; password: string }) => Promise<void>;
   register: (data: { email: string; password: string; role: 'client' | 'freelancer' }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +33,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [loading, setLoading] = useState<boolean>(true);
 
+  function clearSession() {
+    setToken(null);
+    setUser(null);
+    setRole(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('user');
+  }
+
   useEffect(() => {
     async function loadUser() {
       if (token) {
@@ -43,8 +52,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem('role', res.user.role);
           localStorage.setItem('user', JSON.stringify(res.user));
         } catch {
-          // Token expired or invalid
-          logout();
+          // Token expired or invalid; clear locally without calling the logout API.
+          clearSession();
         }
       }
       setLoading(false);
@@ -68,13 +77,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await authApi.register(data);
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    setRole(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    localStorage.removeItem('user');
+  const logout = async (): Promise<void> => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Logout should still clear the local session if the server call fails.
+    } finally {
+      clearSession();
+    }
   };
 
   return (

@@ -1,3 +1,4 @@
+// OWNER: Sixolile — REMOVE BEFORE COMMIT
 import mongoose, { Schema } from 'mongoose';
 
 export interface User {
@@ -7,12 +8,18 @@ export interface User {
   passwordHash: string;
   role: 'client' | 'freelancer' | 'admin';
   createdAt: string;
+  tokenVersion: number;
+  failedLoginAttempts: number;
+  lockUntil: string | null;
 }
 
 export interface UserRepository {
   findByEmail(email: string): Promise<User | null>;
   findById(id: string): Promise<User | null>;
-  create(user: Omit<User, 'id' | 'createdAt'>): Promise<User>;
+  create(user: Omit<User, 'id' | 'createdAt' | 'tokenVersion' | 'failedLoginAttempts' | 'lockUntil'>): Promise<User>;
+  registerFailedLogin(id: string, maxFailures: number, lockMinutes: number): Promise<User | null>;
+  resetLoginFailures(id: string): Promise<void>;
+  bumpTokenVersion(id: string): Promise<number | null>;
 }
 
 interface IUserDocument {
@@ -23,6 +30,9 @@ interface IUserDocument {
   role: 'client' | 'freelancer' | 'admin';
   createdAt: Date;
   updatedAt: Date;
+  tokenVersion?: number;
+  failedLoginAttempts?: number;
+  lockUntil?: Date | null;
 }
 
 const userSchema = new Schema<IUserDocument>(
@@ -48,6 +58,18 @@ const userSchema = new Schema<IUserDocument>(
       enum: ['client', 'freelancer', 'admin'],
       required: true,
     },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -64,6 +86,9 @@ function toUser(doc: IUserDocument): User {
     passwordHash: doc.passwordHash,
     role: doc.role,
     createdAt: doc.createdAt.toISOString(),
+    tokenVersion: doc.tokenVersion ?? 0,
+    failedLoginAttempts: doc.failedLoginAttempts ?? 0,
+    lockUntil: doc.lockUntil ? new Date(doc.lockUntil).toISOString() : null,
   };
 }
 
@@ -81,14 +106,62 @@ export const userRepository: UserRepository = {
     return doc ? toUser(doc) : null;
   },
 
-  async create(user: Omit<User, 'id' | 'createdAt'>): Promise<User> {
+  async create(user: Omit<User, 'id' | 'createdAt' | 'tokenVersion' | 'failedLoginAttempts' | 'lockUntil'>): Promise<User> {
     const doc = await UserModel.create({
       email: user.email.toLowerCase().trim(),
       name: user.name || user.email.split('@')[0],
       passwordHash: user.passwordHash,
       role: user.role,
+      tokenVersion: 0,
+      failedLoginAttempts: 0,
+      lockUntil: null,
     });
     return toUser(doc);
+  },
+
+  async registerFailedLogin(id: string, maxFailures: number, lockMinutes: number): Promise<User | null> {
+    const lockUntil = new Date(Date.now() + lockMinutes * 60 * 1000);
+    const doc = await UserModel.findOneAndUpdate(
+      { _id: id },
+      [
+        {
+          $set: {
+            failedLoginAttempts: {
+              $add: [{ $ifNull: ['$failedLoginAttempts', 0] }, 1],
+            },
+          },
+        },
+        {
+          $set: {
+            lockUntil: {
+              $cond: [
+                { $gte: ['$failedLoginAttempts', maxFailures] },
+                lockUntil,
+                null,
+              ],
+            },
+          },
+        },
+      ],
+      { new: true }
+    ).exec();
+    return doc ? toUser(doc) : null;
+  },
+
+  async resetLoginFailures(id: string): Promise<void> {
+    await UserModel.updateOne(
+      { _id: id },
+      { $set: { failedLoginAttempts: 0, lockUntil: null } }
+    ).exec();
+  },
+
+  async bumpTokenVersion(id: string): Promise<number | null> {
+    const doc = await UserModel.findOneAndUpdate(
+      { _id: id },
+      { $inc: { tokenVersion: 1 } },
+      { new: true }
+    ).exec();
+    return doc ? (doc.tokenVersion ?? 0) : null;
   },
 };
 //updated from part1

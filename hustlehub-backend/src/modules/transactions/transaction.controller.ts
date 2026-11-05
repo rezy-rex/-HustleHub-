@@ -1,4 +1,4 @@
-
+// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { Request, Response, NextFunction } from 'express';
 import { transactionService } from './transaction.service';
 
@@ -7,6 +7,15 @@ export const transactionController = {
     try {
       const result = await transactionService.listMyTransactions(req.user!.id);
       res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async taxSummary(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = await transactionService.getTaxSummary(req.user!.id);
+      res.status(200).json({ success: true, data });
     } catch (err) {
       next(err);
     }

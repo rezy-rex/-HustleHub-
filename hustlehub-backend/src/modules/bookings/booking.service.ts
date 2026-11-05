@@ -1,8 +1,10 @@
+// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { bookingRepository, Booking } from './booking.repository';
 import { gigRepository } from '../gigs/gig.repository';
 import { userRepository } from '../auth/user.repository';
 import { transactionRepository } from '../transactions/transaction.repository';
 import { AppError } from '../../utils/AppError';
+import { logEvent } from '../../utils/logger';
 
 export const bookingService = {
   async createBooking(clientId: string, gigId: string): Promise<Booking> {
@@ -29,12 +31,34 @@ export const bookingService = {
       status: 'confirmed',
     });
 
-    await transactionRepository.create({
+    logEvent('booking.created', {
       bookingId: booking.id,
+      gigId: gig.id,
       clientId,
       freelancerId: gig.freelancerId,
       amount: gig.price,
     });
+
+    try {
+      const transaction = await transactionRepository.create({
+        bookingId: booking.id,
+        clientId,
+        freelancerId: gig.freelancerId,
+        amount: gig.price,
+      });
+      logEvent('transaction.recorded', {
+        transactionId: transaction.id,
+        bookingId: booking.id,
+        freelancerId: gig.freelancerId,
+        amount: gig.price,
+      });
+    } catch (error) {
+      logEvent('transaction.failed', {
+        bookingId: booking.id,
+        freelancerId: gig.freelancerId,
+      }, 'error');
+      throw error;
+    }
 
     return booking;
   },

@@ -1,7 +1,7 @@
-
+// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React, { useEffect, useState } from 'react';
 import { Booking, Transaction, bookingsApi, transactionsApi, ApiError } from '../api/client';
-import { formatRands, formatRandsWithDecimals } from '../utils/format';
+import { formatZAR } from '../utils/currency';
 
 export const ReceivedBookingsPage: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -56,7 +56,7 @@ export const ReceivedBookingsPage: React.FC = () => {
         <div>
           <span style={{ fontSize: '0.9rem', opacity: 0.9 }}>Total Income Earned (ZAR)</span>
           <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#fed7aa', marginTop: '0.25rem' }}>
-            {formatRandsWithDecimals(totalIncome)}
+            {formatZAR(totalIncome)}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -109,7 +109,7 @@ export const ReceivedBookingsPage: React.FC = () => {
               <div style={{ textAlign: 'right' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Gig Earnings</span>
                 <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--primary-orange)' }}>
-                  {formatRands(booking.gigSnapshot.price)}
+                  {formatZAR(booking.gigSnapshot.price)}
                 </div>
               </div>
             </div>

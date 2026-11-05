@@ -540,4 +540,18 @@ button {
   align-self: flex-start;
 }
 
+/* Dashboard */
+.dashboard-page h1 { margin-bottom: 1.25rem; font-size: 1.6rem; }
+.dashboard-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.dashboard-summary-card { display: flex; flex-direction: column; gap: 0.45rem; }
+.dashboard-summary-label { color: var(--text-muted); font-weight: 600; font-size: 0.88rem; }
+.dashboard-summary-value { font-size: 1.35rem; color: var(--primary-navy); }
+.dashboard-chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.dashboard-chart h2, .bracket-progress h2, .assumptions-box h2 { margin-bottom: 0.75rem; font-size: 1.05rem; }
+.dashboard-chart-container { width: 100%; height: 280px; }
+.bracket-progress { margin-bottom: 1.25rem; }
+.assumptions-box ul { margin-left: 1.25rem; color: var(--navy-light); }
+.assumptions-box li + li { margin-top: 0.45rem; }
+.dashboard-state { text-align: center; padding: 2rem; }
+
 

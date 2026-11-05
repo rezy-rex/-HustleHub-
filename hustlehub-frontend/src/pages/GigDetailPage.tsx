@@ -1,9 +1,9 @@
-
+// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Gig, gigsApi, bookingsApi, ApiError, DEFAULT_CATEGORY_IMAGES } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { formatRands } from '../utils/format';
+import { formatZAR } from '../utils/currency';
 
 export const GigDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -146,7 +146,7 @@ export const GigDetailPage: React.FC = () => {
                 Fixed Rate
               </span>
               <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary-orange)' }}>
-                {formatRands(gig.price)}
+                {formatZAR(gig.price)}
               </span>
             </div>
           </div>
@@ -193,7 +193,7 @@ export const GigDetailPage: React.FC = () => {
                 className="btn btn-primary"
                 style={{ padding: '0.75rem 2rem', fontSize: '1.05rem', fontWeight: 700 }}
               >
-                {bookingLoading ? 'Processing Booking...' : `Book Gig for ${formatRands(gig.price)}`}
+                {bookingLoading ? 'Processing Booking...' : `Book Gig for ${formatZAR(gig.price)}`}
               </button>
             )}
 

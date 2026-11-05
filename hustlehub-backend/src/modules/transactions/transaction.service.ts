@@ -1,5 +1,6 @@
-
+// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { transactionRepository, Transaction } from './transaction.repository';
+import { buildTaxSummary, TaxSummary } from './tax.service';
 
 export interface MyTransactionsResult {
   transactions: Transaction[];
@@ -14,5 +15,10 @@ export const transactionService = {
     ]);
 
     return { transactions, totalIncome };
+  },
+
+  async getTaxSummary(freelancerId: string, now = new Date()): Promise<TaxSummary> {
+    const transactions = await transactionRepository.findByFreelancerId(freelancerId);
+    return buildTaxSummary(transactions, now);
   },
 };

@@ -1,4 +1,4 @@
-
+// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
@@ -68,7 +68,7 @@ describe('GigsPage', () => {
     // Check count of gig cards rendered
     expect(screen.getByTestId('gig-card-gig-1')).toBeInTheDocument();
     expect(screen.getByTestId('gig-card-gig-2')).toBeInTheDocument();
-    expect(screen.getByText('R 350')).toBeInTheDocument();
-    expect(screen.getByText('R 150')).toBeInTheDocument();
+    expect(screen.getByText(/R.*350/i)).toBeInTheDocument();
+    expect(screen.getByText(/R.*150/i)).toBeInTheDocument();
   });
 });

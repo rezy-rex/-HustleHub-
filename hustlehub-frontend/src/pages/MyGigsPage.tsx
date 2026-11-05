@@ -1,7 +1,7 @@
-
+// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React, { useEffect, useState } from 'react';
 import { Gig, gigsApi, ApiError, DEFAULT_CATEGORY_IMAGES } from '../api/client';
-import { formatRands } from '../utils/format';
+import { formatZAR } from '../utils/currency';
 
 const CATEGORY_OPTIONS = [
   'Graphic Design',
@@ -54,7 +54,10 @@ export const MyGigsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchMyGigs();
+    const timer = window.setTimeout(() => {
+      void fetchMyGigs();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const handleCreateGig = async (e: React.FormEvent) => {
@@ -393,7 +396,7 @@ export const MyGigsPage: React.FC = () => {
                         {gig.description}
                       </p>
                       <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--primary-orange)' }}>
-                        {formatRands(gig.price)}
+                        {formatZAR(gig.price)}
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>

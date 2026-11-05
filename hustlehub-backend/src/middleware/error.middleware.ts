@@ -1,6 +1,7 @@
+// OWNER: Odirile — REMOVE BEFORE COMMIT
 import { NextFunction, Request, Response } from 'express';
 import { AppError } from '../utils/AppError';
-import { logger } from '../utils/logger';
+import { logEvent } from '../utils/logger';
 
 export function notFoundMiddleware(req: Request, res: Response): void {
   res.status(404).json({
@@ -23,7 +24,11 @@ export function errorMiddleware(err: unknown, req: Request, res: Response, next:
 
   // Unexpected error — log full detail server-side only. The client never
   // sees a stack trace, file path, or internal configuration value.
-  logger.error('Unhandled error', err);
+  logEvent('error.unhandled', {
+    method: req.method,
+    path: req.path,
+    err: err instanceof Error ? { message: err.message, stack: err.stack } : { message: String(err) },
+  }, 'error');
   res.status(500).json({
     success: false,
     error: { message: 'Internal server error', code: 'INTERNAL_ERROR' },

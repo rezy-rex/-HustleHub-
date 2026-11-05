@@ -1,3 +1,4 @@
+// OWNER: Sixolile — REMOVE BEFORE COMMIT
 import { NextFunction, Request, Response } from 'express';
 import { authService } from './auth.service';
 
@@ -17,6 +18,15 @@ export const authController = {
       const { email, password } = req.body;
       const result = await authService.login(email, password);
       res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async logout(req: Request, res: Response, next: NextFunction) {
+    try {
+      await authService.logout(req.user!.id);
+      res.status(200).json({ success: true, data: { message: 'Logged out' } });
     } catch (err) {
       next(err);
     }

@@ -1,7 +1,8 @@
+// OWNER: Lesedi — REMOVE BEFORE COMMIT
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Gig, gigsApi, ApiError, GIG_CATEGORIES, DEFAULT_CATEGORY_IMAGES } from '../api/client';
-import { formatRands } from '../utils/format';
+import { formatZAR } from '../utils/currency';
 
 export const GigsPage: React.FC = () => {
   const [gigs, setGigs] = useState<Gig[]>([]);
@@ -153,7 +154,7 @@ export const GigsPage: React.FC = () => {
                         Starting At
                       </span>
                       <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--primary-orange)' }}>
-                        {formatRands(gig.price)}
+                        {formatZAR(gig.price)}
                       </div>
                     </div>
                     <Link to={`/gigs/${gig.id}`} className="btn btn-primary" style={{ padding: '0.45rem 1rem' }}>
