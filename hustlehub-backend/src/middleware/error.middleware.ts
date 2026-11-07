@@ -15,6 +15,13 @@ export function notFoundMiddleware(req: Request, res: Response): void {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Express error middleware contract requires 4-argument signature (err, req, res, next)
 export function errorMiddleware(err: unknown, req: Request, res: Response, next: NextFunction): void {
   if (err instanceof AppError) {
+    const level = err.statusCode >= 500 ? 'error' : err.statusCode >= 400 ? 'warn' : 'info';
+    logEvent('error.application', {
+      status: err.statusCode,
+      code: err.code,
+      method: req.method,
+      path: req.path,
+    }, level);
     res.status(err.statusCode).json({
       success: false,
       error: { message: err.message, code: err.code },

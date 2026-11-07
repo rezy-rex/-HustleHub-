@@ -245,13 +245,67 @@ submission evidence document for the full list and what each shows.
 
 **https://youtu.be/jPjLL0S1O74?si=GYdCMtQhk3E_keJO**
 
-## 11. What's next (Part 3)
+## 11. Part 3 logging and CI/CD
 
-- Tax estimation and an income dashboard with visual summaries
-- CI/CD pipeline (GitHub Actions) — deliberately not built yet, to keep
-  each part's progression visible rather than front-loading it
-- Static code analysis
-- Docker + Docker Compose for both backend and frontend
-- Structured logging of key events (logins, bookings, transactions, errors)
-- At least two additional security features beyond this submission's minimum
-- Final security review
+### Structured logging
+
+The backend uses Pino JSON logging with `pino-http` request logging. Every log uses the
+`HustleHub+` service and environment base fields, ISO timestamps, structured event names,
+and numeric Pino levels so the `@axiomhq/pino` multi-target transport maps levels correctly.
+
+Important events include registration/login outcomes, authorization failures, gig CRUD,
+booking creation and failures, transaction outcomes, income calculation, validation,
+HTTP requests, startup/shutdown, database failures, and process exceptions. Logs are
+written to stdout for Docker visibility and forwarded asynchronously to Axiom when both
+Axiom environment variables are configured.
+
+Configure:
+
+```dotenv
+AXIOM_TOKEN=
+AXIOM_DATASET=hustlehub-logs
+AXIOM_URL=
+LOG_LEVEL=info
+```
+
+`AXIOM_TOKEN` and `AXIOM_DATASET` are optional. Missing credentials disable remote shipping
+but never prevent startup. Use a local `.env` or deployment secret store; never commit the
+token. Keep the dataset name as `hustlehub-logs` in the supplied Axiom configuration.
+Axiom transport initialization and delivery errors are written to stderr, and `SIGTERM`,
+`SIGINT`, uncaught exceptions, and startup failures attempt to flush pending logs.
+
+Pino redaction removes passwords, password hashes, JWTs/tokens, authorization headers,
+cookies, API keys, MongoDB connection strings, and nested secret fields. HTTP logs record
+method, path, status, duration, request ID, and authenticated user ID, but never request
+bodies or credentials.
+
+To verify locally:
+
+```bash
+cd hustlehub-backend
+npm run dev
+curl.exe -k https://localhost:5000/health
+```
+
+In Docker, inspect JSON on stdout with `docker compose logs -f api`. For Axiom, open the
+`hustlehub-logs` dataset and confirm events such as `server.started`, `http.request`,
+`auth.login.success`, or `booking.created` appear after requests are made.
+
+### GitHub Actions
+
+`.github/workflows/ci.yml` runs on pushes to `main`, pull requests targeting `main`, and
+manual dispatch. The backend job runs `npm ci`, ESLint, TypeScript checking, Vitest,
+production build, and dependency auditing. The frontend job runs `npm ci`, ESLint, Vitest,
+TypeScript/Vite build, and dependency auditing.
+
+The Docker/API job validates Compose, builds both images, starts the ephemeral MongoDB and
+API stack, and runs the existing Part 3 Newman collection through `scripts/ci-newman.sh`.
+Tests use a temporary MongoDB service and CI JWT value, never the production database or
+Axiom credentials.
+
+Required repository secret: none for the base pipeline because Axiom is disabled/blank in
+CI compose and tests. Optional secrets for a future deployment workflow are `AXIOM_TOKEN`
+and `AXIOM_DATASET`; the production dataset is `hustlehub-logs`.
+
+View runs under the repository's **Actions** tab. A push or pull request is successful only
+when backend checks, frontend checks, Docker validation, and Newman phases all pass.

@@ -1,5 +1,6 @@
 import { transactionRepository, Transaction } from './transaction.repository';
 import { buildTaxSummary, TaxSummary } from './tax.service';
+import { logEvent } from '../../utils/logger';
 
 export interface MyTransactionsResult {
   transactions: Transaction[];
@@ -13,6 +14,7 @@ export const transactionService = {
       transactionRepository.sumByFreelancerId(freelancerId),
     ]);
 
+    logEvent('income.calculated', { userId: freelancerId, transactionCount: transactions.length });
     return { transactions, totalIncome };
   },
 

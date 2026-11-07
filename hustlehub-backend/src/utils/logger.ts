@@ -33,81 +33,79 @@ function redactForCapture(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redactForCapture);
   const result: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-    if (/^(password|passwordHash|token|authorization)$/i.test(key) || key.endsWith('.password') || key.endsWith('.passwordHash') || key.endsWith('.token')) {
-      // eslint-disable-next-line security/detect-object-injection -- key is derived from Object.entries during log redaction
+    if (/^(password|passwordHash|token|authorization|apiKey|api_key)$/i.test(key)
+      || key.endsWith('.password') || key.endsWith('.passwordHash') || key.endsWith('.token')) {
+      // eslint-disable-next-line security/detect-object-injection -- key is derived from Object.entries
       result[key] = '[REDACTED]';
     } else {
-      // eslint-disable-next-line security/detect-object-injection -- key is derived from Object.entries during log redaction
+      // eslint-disable-next-line security/detect-object-injection -- key is derived from Object.entries
       result[key] = redactForCapture(child);
     }
   }
   return result;
 }
 
-export function createLogger(destination?: DestinationStream): {
+export interface StructuredLogger {
   info: (message: string, meta?: unknown) => void;
   warn: (message: string, meta?: unknown) => void;
   error: (message: string, meta?: unknown) => void;
-} {
+}
+
+let activeLogger: StructuredLogger;
+let activeRoot: PinoLogger;
+
+export function createLogger(destination?: DestinationStream): StructuredLogger {
   let pinoDestination: DestinationStream | undefined = destination;
 
   if (!pinoDestination) {
+    const stdout = pino.destination(1);
     if (env.AXIOM_TOKEN && env.AXIOM_DATASET) {
       try {
         const axiomOptions: Record<string, unknown> = {
           dataset: env.AXIOM_DATASET,
           token: env.AXIOM_TOKEN,
           axiomClient: 'hustlehub-api/1.0',
-          onError: () => undefined,
         };
-        if (env.AXIOM_URL) {
-          axiomOptions.url = env.AXIOM_URL;
-          axiomOptions.edgeUrl = env.AXIOM_URL;
-        }
+        if (env.AXIOM_URL) axiomOptions.url = env.AXIOM_URL;
         const transport = pino.transport({
           targets: [
             { target: 'pino/file', options: { destination: 1 } },
             { target: '@axiomhq/pino', options: axiomOptions },
           ],
         });
-        transport.on?.('error', () => undefined);
+        transport.on('error', (error: Error) => {
+          process.stderr.write(`[hustlehub-logger] Axiom transport error: ${error.message}\n`);
+        });
         pinoDestination = transport;
-      } catch {
-        pinoDestination = pino.destination(1);
+      } catch (error) {
+        process.stderr.write(`[hustlehub-logger] Axiom transport initialization failed: ${error instanceof Error ? error.message : String(error)}\n`);
+        pinoDestination = stdout;
       }
     } else {
-      pinoDestination = pino.destination(1);
+      pinoDestination = stdout;
     }
   }
 
-  const root = pino(
-    {
-      level: env.LOG_LEVEL,
-      base: { service: 'hustlehub-api', env: env.NODE_ENV },
-      timestamp: pino.stdTimeFunctions.isoTime,
-      formatters: { level: (label: string) => ({ level: label }) },
-      redact: {
-        paths: [
-          'req.headers.authorization',
-          'req.headers.cookie',
-          'password',
-          'passwordHash',
-          'token',
-          'authorization',
-          '*.password',
-          '*.passwordHash',
-          '*.token',
-        ],
-        censor: '[REDACTED]',
-      },
+  const options = {
+    level: env.LOG_LEVEL || 'info',
+    base: { service: 'hustlehub-api', env: env.NODE_ENV },
+    timestamp: pino.stdTimeFunctions.isoTime,
+    // Keep numeric Pino levels so multi-target transports such as Axiom map levels correctly.
+    redact: {
+      paths: [
+        'req.headers.authorization', 'req.headers.cookie', 'password', 'passwordHash',
+        'token', 'authorization', 'apiKey', 'api_key', 'mongodb_uri', 'MONGODB_URI',
+        '*.password', '*.passwordHash', '*.token', '*.apiKey', '*.api_key',
+      ],
+      censor: '[REDACTED]',
     },
-    pinoDestination
-  );
+  };
+
+  const root = pino(options, pinoDestination);
+  activeRoot = root;
 
   function write(level: LogLevel, message: string, meta?: unknown): void {
-    const context = currentContext();
-    const normalizedMeta = createMeta(meta);
-    const payload = { ...context, ...(normalizedMeta ?? {}) };
+    const payload = { ...currentContext(), ...(createMeta(meta) ?? {}) };
     if (destination) {
       const line = {
         level,
@@ -117,46 +115,42 @@ export function createLogger(destination?: DestinationStream): {
         ...redactForCapture(payload) as Record<string, unknown>,
         msg: message,
       };
-      destination.write(JSON.stringify(line));
+      destination.write(`${JSON.stringify(line)}\n`);
       return;
     }
-    // eslint-disable-next-line security/detect-object-injection -- level is constrained to LogLevel ('info' | 'warn' | 'error')
+    // eslint-disable-next-line security/detect-object-injection -- level is constrained to LogLevel
     if (Object.keys(payload).length > 0) root[level](payload, message);
-    // eslint-disable-next-line security/detect-object-injection -- level is constrained to LogLevel ('info' | 'warn' | 'error')
+    // eslint-disable-next-line security/detect-object-injection -- level is constrained to LogLevel
     else root[level](message);
   }
 
-  const created = {
+  const created: StructuredLogger = {
     info: (message: string, meta?: unknown) => write('info', message, meta),
     warn: (message: string, meta?: unknown) => write('warn', message, meta),
     error: (message: string, meta?: unknown) => write('error', message, meta),
   };
 
-  if (!env.AXIOM_TOKEN || !env.AXIOM_DATASET) {
-    created.info('Axiom log shipping is disabled');
-  }
   activeLogger = created;
+  if (!destination && (!env.AXIOM_TOKEN || !env.AXIOM_DATASET)) {
+    created.info('Axiom log shipping disabled: AXIOM_TOKEN or AXIOM_DATASET is not configured');
+  }
   return created;
 }
 
-let activeLogger: ReturnType<typeof createLogger>;
 activeLogger = createLogger();
 export const logger = activeLogger;
 
-let rootLogger: PinoLogger | undefined;
 export function getPinoLogger(): PinoLogger {
-  if (!rootLogger) {
-    let destination: DestinationStream | undefined;
-    if (!destination) destination = pino.destination(1);
-    rootLogger = pino({
-      level: env.LOG_LEVEL,
-      base: { service: 'hustlehub-api', env: env.NODE_ENV },
-      timestamp: pino.stdTimeFunctions.isoTime,
-      formatters: { level: (label: string) => ({ level: label }) },
-      redact: { paths: ['req.headers.authorization', 'req.headers.cookie', 'password', 'passwordHash', 'token', 'authorization', '*.password', '*.passwordHash', '*.token'], censor: '[REDACTED]' },
-    }, destination);
-  }
-  return rootLogger;
+  return activeRoot;
+}
+
+export function flushLogs(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    activeRoot.flush((error?: Error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
 }
 
 export function logEvent(
@@ -164,8 +158,10 @@ export function logEvent(
   fields?: Record<string, unknown>,
   level: LogLevel = 'info'
 ): void {
-  // eslint-disable-next-line security/detect-object-injection -- level is constrained to LogLevel ('info' | 'warn' | 'error')
-  activeLogger[level](event, { ...currentContext(), ...fields });
+  const payload = { ...currentContext(), event, ...(fields ?? {}) };
+  if (level === 'error') activeLogger.error(event, payload);
+  else if (level === 'warn') activeLogger.warn(event, payload);
+  else activeLogger.info(event, payload);
 }
 
 export function hashEmail(email: string): string {

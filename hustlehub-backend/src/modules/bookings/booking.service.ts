@@ -17,18 +17,24 @@ export const bookingService = {
     const freelancerName = gig.freelancerName || 'Freelancer';
 
     // Note: this is two sequential writes, not a single atomic transaction — acceptable simplification for this scope, worth one line in the README, not something to silently leave unexplained.
-    const booking = await bookingRepository.create({
-      gigId: gig.id,
-      gigSnapshot: {
-        title: gig.title,
-        price: gig.price,
-      },
-      clientId,
-      clientName,
-      freelancerId: gig.freelancerId,
-      freelancerName,
-      status: 'confirmed',
-    });
+    let booking: Booking;
+    try {
+      booking = await bookingRepository.create({
+        gigId: gig.id,
+        gigSnapshot: {
+          title: gig.title,
+          price: gig.price,
+        },
+        clientId,
+        clientName,
+        freelancerId: gig.freelancerId,
+        freelancerName,
+        status: 'confirmed',
+      });
+    } catch (error) {
+      logEvent('booking.failed', { gigId, clientId }, 'error');
+      throw error;
+    }
 
     logEvent('booking.created', {
       bookingId: booking.id,

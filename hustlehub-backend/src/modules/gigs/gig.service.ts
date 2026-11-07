@@ -11,11 +11,13 @@ export const gigService = {
       const user = await userRepository.findById(freelancerId);
       freelancerName = user?.name || user?.email.split('@')[0] || 'Verified Freelancer';
     }
-    return gigRepository.create({
+    const gig = await gigRepository.create({
       freelancerId,
       freelancerName,
       ...data,
     });
+    logEvent('gig.created', { gigId: gig.id, userId: freelancerId, titleLength: gig.title.length });
+    return gig;
   },
 
   async listGigs(): Promise<Gig[]> {
@@ -48,6 +50,7 @@ export const gigService = {
     if (!updated) {
       throw new AppError('Failed to update gig', 500, 'GIG_UPDATE_FAILED');
     }
+    logEvent('gig.updated', { gigId: updated.id, userId: freelancerId });
     return updated;
   },
 
@@ -65,6 +68,7 @@ export const gigService = {
     if (!deleted) {
       throw new AppError('Failed to delete gig', 500, 'GIG_DELETE_FAILED');
     }
+    logEvent('gig.deleted', { gigId: id, userId: freelancerId });
   },
 };
 //Update from part1
