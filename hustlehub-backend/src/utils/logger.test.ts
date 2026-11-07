@@ -2,6 +2,7 @@ import { Writable } from 'stream';
 import { describe, expect, it } from 'vitest';
 import { createLogger, hashEmail, logEvent, runWithLogContext } from './logger';
 
+
 class MemoryDestination extends Writable {
   output = '';
   override _write(chunk: Buffer, _encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
@@ -10,7 +11,11 @@ class MemoryDestination extends Writable {
   }
 }
 
+
+// Verifies logger security and context behaviours using in-memory destinations,
+// so the tests do not require a live Axiom account.
 describe('structured logger', () => {
+  // Ensure common credentials and request authorisation headers are not emitted.
   it('redacts secrets and authorization headers', async () => {
     const destination = new MemoryDestination();
     const memoryLogger = createLogger(destination);
@@ -28,6 +33,8 @@ describe('structured logger', () => {
     expect(destination.output).toContain('[REDACTED]');
   });
 
+
+  // Normalised versions of the same email should produce the same stable identifier.
   it('hashes emails consistently without exposing the original email', () => {
     const first = hashEmail('  Mpho@HustleHub.com ');
     const second = hashEmail('mpho@hustlehub.com');
@@ -36,6 +43,8 @@ describe('structured logger', () => {
     expect(first).not.toContain('mpho');
   });
 
+
+  // Request context should be included when present and logging should remain safe without it.
   it('adds requestId inside a context and is safe outside one', async () => {
     const destination = new MemoryDestination();
     const memoryLogger = createLogger(destination);
@@ -48,6 +57,8 @@ describe('structured logger', () => {
     expect(() => logEvent('outside.context')).not.toThrow();
   });
 
+
+  // Logger construction should still succeed when optional Axiom configuration is absent.
   it('creates a logger when Axiom configuration is absent', () => {
     const destination = new MemoryDestination();
     expect(() => createLogger(destination)).not.toThrow();

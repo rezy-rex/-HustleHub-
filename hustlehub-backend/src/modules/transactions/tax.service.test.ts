@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { buildTaxSummary, calculateTax, getTaxYear } from './tax.service';
 
+
+// Regression tests cover tax arithmetic, bracket transitions, tax-year boundaries
+// and the monthly aggregation used by the freelancer tax summary.
 describe('tax service', () => {
+  // Check representative incomes against expected outputs from the configured table.
   it('calculates required tax vectors', () => {
     expect(calculateTax(0, 2026).tax).toBe(0);
     expect(calculateTax(99000, 2026).tax).toBe(0);
@@ -11,6 +15,8 @@ describe('tax service', () => {
     expect(calculateTax(1000000, 2026).tax).toBe(288293);
   });
 
+
+  // Ensure values on either side of a threshold select the expected marginal rate.
   it('uses the correct bracket at boundaries and for the top bracket', () => {
     expect(calculateTax(245100, 2026).bracketIndex).toBe(0);
     expect(calculateTax(245100, 2026).marginalRate).toBe(0.18);
@@ -19,6 +25,8 @@ describe('tax service', () => {
     expect(calculateTax(2000000, 2026).nextBracket).toBeNull();
   });
 
+
+  // Cover the March tax-year rollover, February end date and leap-year behaviour.
   it('returns the correct SARS tax year boundaries', () => {
     expect(getTaxYear(new Date('2026-10-28T00:00:00Z')).label).toBe('2026/27');
     expect(getTaxYear(new Date('2027-02-28T00:00:00Z')).label).toBe('2026/27');
@@ -27,6 +35,8 @@ describe('tax service', () => {
     expect(getTaxYear(new Date('2027-03-01T00:00:00Z')).end).toBe('2028-02-29T00:00:00.000Z');
   });
 
+
+  // Confirm month grouping, cumulative totals and exclusion of prior-year income.
   it('builds monthly summaries and excludes income outside the year', () => {
     const now = new Date('2026-05-20T00:00:00Z');
     const summary = buildTaxSummary([
@@ -37,6 +47,7 @@ describe('tax service', () => {
       { amount: 999999, createdAt: '2025-02-28T00:00:00Z' },
     ], now);
 
+
     expect(summary.monthly).toHaveLength(3);
     expect(summary.monthly.map((month) => month.month)).toEqual(['2026-03', '2026-04', '2026-05']);
     expect(summary.monthly[0].gross).toBe(30000);
@@ -46,6 +57,8 @@ describe('tax service', () => {
     expect(summary.netIncome).toBe(summary.grossIncome - summary.estimatedTax);
   });
 
+
+  // Empty transaction history should produce a valid zero-income summary.
   it('returns an all-zero summary with no transactions', () => {
     const summary = buildTaxSummary([], new Date('2026-06-01T00:00:00Z'));
     expect(summary.grossIncome).toBe(0);
