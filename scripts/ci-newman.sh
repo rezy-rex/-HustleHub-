@@ -50,9 +50,10 @@ $NEWMAN run "${COLLECTION}" \
   --reporter-junit-export newman-phase1.xml
 
 echo "=== PHASE 2: Rate Limiting Security Tests (Strict Default Limits) ==="
-# Recreate the API container without raised env limits so defaults (5 and 10) apply
-# and in-memory rate-limiter counters are reset.
-$COMPOSE up -d --force-recreate --no-deps --wait api
+# Recreate the API container with the strict production limits set EXPLICITLY, so an inherited
+# environment variable (e.g. from the CI job) can never leak the raised Phase 1 values (1000)
+# into this phase. Recreating also resets the in-memory rate-limiter counters.
+AUTH_RATE_LIMIT_MAX=5 BOOKING_RATE_LIMIT_MAX=10 $COMPOSE up -d --force-recreate --no-deps --wait api
 
 echo "Running Phase 2 folder: 5. Rate Limiting..."
 $NEWMAN run "${COLLECTION}" \

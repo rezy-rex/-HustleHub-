@@ -60,8 +60,6 @@ jobs:
     needs: [backend, frontend]
     env:
       CI_JWT_SECRET: ${{ secrets.CI_JWT_SECRET || 'ci-only-test-secret-that-is-at-least-32-characters' }}
-      AUTH_RATE_LIMIT_MAX: 1000
-      BOOKING_RATE_LIMIT_MAX: 1000
     steps:
       - uses: actions/checkout@v4
 
@@ -69,13 +67,9 @@ jobs:
 
       - run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build api client
 
-      # NEW: throwaway certs so the api bind mounts (certs/docker/api.key, api.crt) exist in CI
-      - name: Generate throwaway CI certs
-        run: |
-          mkdir -p certs/docker
-          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" \
-            -keyout certs/docker/api.key -out certs/docker/api.crt
-          chmod 644 certs/docker/api.key certs/docker/api.crt
+      # Generate the certs the api bind mounts need (certs/docker/api.key, api.crt)
+      - name: Generate Docker dev certs
+        run: bash scripts/gen-certs.sh
 
       - run: bash scripts/ci-newman.sh
 
