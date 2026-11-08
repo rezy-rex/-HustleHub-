@@ -64,8 +64,28 @@ jobs:
       BOOKING_RATE_LIMIT_MAX: 1000
     steps:
       - uses: actions/checkout@v4
+
       - run: docker compose -f docker-compose.yml -f docker-compose.ci.yml config
+
       - run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build api client
+
+      # NEW: throwaway certs so the api bind mounts (certs/docker/api.key, api.crt) exist in CI
+      - name: Generate throwaway CI certs
+        run: |
+          mkdir -p certs/docker
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" \
+            -keyout certs/docker/api.key -out certs/docker/api.crt
+          chmod 644 certs/docker/api.key certs/docker/api.crt
+
       - run: bash scripts/ci-newman.sh
+
+      # NEW: prints the API's own startup error when the job fails (runs before teardown)
+      - name: Debug on failure
+        if: failure()
+        run: |
+          ls -la certs/docker || true
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml ps -a
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml logs api
+
       - run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v --remove-orphans
         if: always()
