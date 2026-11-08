@@ -1,311 +1,275 @@
-# HustleHub+ — Backend (Part 1)
+# HustleHub+
 
-APDS7311/w · INSY7314/w — Application Development Security POE
+APDS7311/w · INSY7314/w — Application Development Security POE (final submission)
 
-## 1. What this is
+HustleHub+ is a secure freelance marketplace. Freelancers list gigs, clients book them, every booking records a transaction, and freelancers see their income and an estimated tax bill on a dashboard. Security is built in from the first request, and the whole stack runs in Docker and is checked by a CI/CD pipeline.
 
-HustleHub+ is a secure freelance marketplace. This repository currently
-contains **Part 1** of a three-part build: the backend authentication
-foundation. It supports user registration and login, with the security
-controls the platform will build on for the rest of the project.
+**Contents:** [Architecture](#2-architecture) · [Run it](#4-running-it) · [API](#5-api-endpoints) · [Tax](#7-tax-estimation) · [Security](#8-security-controls) · [Logging](#9-logging) · [Testing](#10-testing) · [CI/CD](#11-cicd-pipeline) · [Static analysis](#12-static-analysis) · [Docker](#13-docker) · [Security review](#14-final-security-review) · [Evidence](#15-evidence) · [Team](#16-team)
 
-**Intended users, longer-term:** Clients (book gigs), Freelancers (list
-gigs, get paid, see tax estimates), and Admins (platform oversight). Part 1
-only builds registration/login for Client and Freelancer roles — Admin
-accounts are never self-assignable through the public API, to prevent
-privilege escalation (see §4).
+## 1. Overview
+
+| Role | What they do |
+|---|---|
+| Client | Browses gigs and books them |
+| Freelancer | Creates and manages gigs, sees bookings, income and estimated tax |
+| Admin | Reserved role. It can never be self-assigned at registration |
+
+| Part | What it added |
+|---|---|
+| 1 | Express API, registration and login, bcrypt hashing, JWT, HTTPS, Zod validation, safe errors |
+| 2 | MongoDB Atlas, gigs, bookings, transactions, RBAC with ownership checks, rate limiting, Helmet and CSP, React frontend, Newman tests |
+| 3 | Tax estimation and income dashboard, structured logging to Axiom, account lockout, token revocation, Docker and Compose, GitHub Actions pipeline, static analysis |
 
 ## 2. Architecture
 
-<img width="2880" height="2060" alt="HustleHub+ Part 1 architecture" src="https://github.com/user-attachments/assets/dbf3c022-7998-46dc-8d61-86f4e2a76d39" />
+<img width="1920" height="1080" alt="hustlehub-architecture pdf" src="https://github.com/user-attachments/assets/d34a7a08-8ae4-4e84-a980-0533af296c2b" />
 
-The full MERN stack is live as of Part 2: **M**ongoDB (Atlas) now backs
-every repository behind the same interfaces Part 1 defined, **R**eact
-(`hustlehub-frontend/`, Vite + TypeScript) is a new sibling project
-consuming this API, and **E**xpress/**N**ode remain the backend.
 
-### Request flow
+Two containers run behind the browser:
 
-1. Request crosses the HTTPS boundary (unchanged from Part 1 — TLS via
-   a locally generated certificate, see §7).
-2. `helmet` applies security headers, `cors` restricts cross-origin
-   requests to the frontend's dev origin, `express.json()` parses the
-   body, `express-mongo-sanitize` strips `$`/`.` keys from
-   body/query/params.
-3. Auth and booking-creation routes pass through rate limiting first
-   (see §6).
-4. A Zod schema validates the body.
-5. Protected routes pass through `authMiddleware` (verifies the JWT,
-   attaches `req.user`), then `requireRole(...)` where the route is
-   restricted to a specific role.
-6. Controller → service → repository, same separation as Part 1.
-   Services are the only layer enforcing ownership — e.g. updating a gig
-   loads it, checks `gig.freelancerId === req.user.id`, and only then
-   writes; a 403 is returned before any write happens otherwise.
-7. Centralised error handler, unchanged from Part 1.
+- **client** (nginx, port 8080) serves the React app, adds security headers and a Content Security Policy, and proxies `/api/` to the API over TLS.
+- **api** (Node 22, Express, TypeScript, HTTPS on port 5000) holds all the business logic and talks to MongoDB Atlas.
 
-## 3. Data model (MongoDB, via Mongoose)
+Request flow through the API:
+
+1. `requestLogger` creates a fresh request ID and logs the request (no query string, no headers or bodies).
+2. `helmet` sets security headers and the API's CSP. `cors` allows only the configured origins.
+3. `express.json()` parses the body, then `express-mongo-sanitize` strips `$` and `.` keys.
+4. Rate limiters apply to login, register and booking creation.
+5. A Zod schema validates the input. Invalid input never reaches a controller.
+6. `authMiddleware` verifies the JWT **and** checks its token version against the database. `requireRole` enforces the role.
+7. Controller, then service, then repository. Services own the business rules, including ownership checks that run before any write.
+8. Any error reaches one handler that returns a generic message and logs the detail privately.
+
+## 3. Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, TypeScript, Vite, React Router, Recharts |
+| Backend | Node.js 22, Express, TypeScript, Zod, bcryptjs, jsonwebtoken |
+| Database | MongoDB Atlas via Mongoose |
+| Logging | pino, shipped to Axiom |
+| Containers | Docker, Docker Compose, nginx |
+| Testing | Vitest, Postman and Newman |
+| CI/CD and scanning | GitHub Actions, ESLint (security plugin), CodeQL, npm audit, Trivy, gitleaks |
+
+## 4. Running it
+
+### With Docker (recommended)
+
+Prerequisites: Docker Desktop, Git Bash, and `hustlehub-backend/.env` created from `.env.example` (Atlas URI, a `JWT_SECRET` of 32+ characters, optional Axiom settings).
+
+```bash
+bash scripts/gen-certs.sh        # once per machine; creates certs/docker/ (gitignored)
+docker compose up --build -d
+docker compose ps                # wait for both services to be healthy
+```
+
+Open http://localhost:8080. The API is also on https://localhost:5000 for Postman. Full guide and troubleshooting: [`docs/running-containers.md`](./docs/running-containers.md).
+
+### Without Docker
+
+```bash
+cd hustlehub-backend && npm install && npm run dev     # needs a mkcert certificate in certs/
+cd hustlehub-frontend && npm install && npm run dev    # http://localhost:5173
+```
+
+## 5. API endpoints
+
+| Method | Route | Access |
+|---|---|---|
+| GET | `/health` | Public, returns `{"status":"ok"}` only |
+| POST | `/api/users/register` | Public, rate limited |
+| POST | `/api/users/login` | Public, rate limited, lockout protected |
+| GET | `/api/users/me` | Authenticated |
+| POST | `/api/users/logout` | Authenticated, revokes all of the caller's tokens |
+| GET | `/api/gigs`, `/api/gigs/:id` | Public |
+| GET | `/api/gigs/mine` | Freelancer |
+| POST | `/api/gigs` | Freelancer |
+| PUT, DELETE | `/api/gigs/:id` | Freelancer, owner only |
+| POST | `/api/bookings` | Client, rate limited |
+| GET | `/api/bookings/mine` | Client |
+| GET | `/api/bookings/received` | Freelancer |
+| GET | `/api/transactions/mine` | Freelancer, transactions and total income |
+| GET | `/api/transactions/tax-summary` | Freelancer, income and estimated tax |
+
+Responses are `{ success: true, data }` or `{ success: false, error: { message, code } }`. Errors never include stack traces, paths or configuration.
+
+## 6. Data model
 
 ```
-User          email, name, passwordHash, role
-Gig           freelancerId, freelancerName, title, description, price,
-              category, coverImage
-Booking       gigId, gigSnapshot: { title, price }, clientId, clientName,
-              freelancerId, freelancerName, status
+User          email, name, passwordHash, role, tokenVersion, failedLoginAttempts, lockUntil
+Gig           freelancerId, freelancerName, title, description, price, category, coverImage
+Booking       gigId, gigSnapshot { title, price }, clientId, clientName, freelancerId, freelancerName, status
 Transaction   bookingId, clientId, freelancerId, amount
 ```
 
-**`gigSnapshot` on Booking** captures the gig's title and price *at the
-moment of booking*. If a freelancer edits or deletes that gig afterward,
-existing bookings and their financial records don't silently change —
-this is an audit-record pattern, not just a live reference.
+`gigSnapshot` freezes the title and price at booking time, so editing or deleting a gig later cannot change a financial record. Creating a booking and its transaction are two sequential writes, not one atomic operation. If the second write fails, a `transaction.failed` event is logged so the orphaned booking can be found. A MongoDB session would make this atomic and is the natural next step.
 
-**Denormalised display names** (`freelancerName` on Gig, `clientName`/
-`freelancerName` on Booking): populated once at creation time rather than
-looked up from `User` on every read, to avoid an extra database round
-trip every time a gig or booking list is rendered. Falls back to the
-email's local part if no name was set at registration.
+## 7. Tax estimation
 
-**Booking → Transaction is two sequential writes, not one atomic
-transaction.** A booking is created, then a matching transaction is
-created immediately after. Accepted simplification for this scope — a
-genuinely atomic version would use a MongoDB client session (Atlas's free
-tier supports this, since it's a replica set), which is a reasonable
-next step rather than something silently skipped.
+The estimate uses the **SARS 2026/27 individual tax tables** (tax year 1 March 2026 to 28 February 2027), with a primary rebate of R17,820 and a tax-free threshold of R99,000 for under-65s.
 
-## 4. API endpoints
-
-| Method | Route | Access | Purpose |
-|---|---|---|---|
-| POST | `/api/users/register` | Public | Create a client or freelancer account |
-| POST | `/api/users/login` | Public | Authenticate, receive a JWT |
-| GET | `/api/users/me` | Authenticated | Caller's own profile |
-| POST | `/api/gigs` | Freelancer | Create a gig |
-| GET | `/api/gigs` | Public | Browse all gigs |
-| GET | `/api/gigs/:id` | Public | View one gig |
-| GET | `/api/gigs/mine` | Freelancer | Own listings |
-| PUT | `/api/gigs/:id` | Freelancer, owner only | Update a gig |
-| DELETE | `/api/gigs/:id` | Freelancer, owner only | Delete a gig |
-| POST | `/api/bookings` | Client | Book a gig (creates a Transaction too) |
-| GET | `/api/bookings/mine` | Client | Bookings I've made |
-| GET | `/api/bookings/received` | Freelancer | Bookings on my gigs |
-| GET | `/api/transactions/mine` | Freelancer | Transaction history + total income |
-
-**Gig browsing is deliberately public** (no `authMiddleware`) — a
-marketplace where you can't see what's on offer before registering isn't
-much of a marketplace. This doesn't weaken RBAC: every *write* (create,
-update, delete) and every endpoint that exposes a specific user's own
-data (bookings, transactions) still requires authentication and the
-correct role.
-
-## 5. RBAC
-
-`requireRole(...roles)` (`src/middleware/requireRole.middleware.ts`) is a
-middleware factory — it reads `req.user.role` (already attached by
-`authMiddleware`, which must run first) and rejects with `403 Forbidden,
-FORBIDDEN_ROLE` if the caller's role isn't in the allowed list.
-
-Role alone isn't sufficient for gig updates/deletes, since "any
-freelancer" and "the freelancer who owns this specific gig" are different
-things. Ownership is checked in the service layer, before the write:
-
-```ts
-const gig = await gigRepository.findById(id);
-if (!gig) throw new AppError('Gig not found', 404, 'GIG_NOT_FOUND');
-if (gig.freelancerId !== freelancerId) {
-  throw new AppError('...', 403, 'NOT_GIG_OWNER');
-}
-// only now does the update/delete actually run
-```
-
-Admin remains a defined role (carried over from Part 1, still not
-self-assignable at registration) but has no dedicated endpoints yet —
-nothing in Part 2's requirements calls for admin-specific features, and
-building them now would be ahead of the rubric's intended progression.
-
-## 6. Security additions (beyond Part 1)
-
-**Rate limiting (`express-rate-limit`).** 5 requests / 15 minutes per IP
-on `POST /api/users/login` and `POST /api/users/register`; 10 requests /
-15 minutes on `POST /api/bookings`. Exceeding the limit returns `429`
-in this API's standard error shape (`{ success: false, error: { message,
-code: "RATE_LIMITED" } }`), not the library's default response format.
-
-**Security headers (`helmet`) with an explicit CSP**, not the default:
-```
-default-src 'self'; script-src 'none'; style-src 'none'; img-src 'none';
-connect-src 'self' http://localhost:5173 http://127.0.0.1:5173;
-frame-ancestors 'none'; object-src 'none'; form-action 'none'
-```
-`script-src`/`style-src`/`img-src` are all `'none'` because this server
-never renders or serves any HTML, CSS, or images itself — it's a pure
-JSON API. `connect-src` allowlists the frontend's dev origin. This is
-strict by default rather than relying on helmet's defaults, which leave
-more open than this API actually needs.
-
-**Input sanitisation (`express-mongo-sanitize`).** Strips `$` and `.`
-keys from `req.body`, `req.query`, and `req.params` before they reach
-Mongoose — closes the NoSQL-operator-injection class of attack (e.g. a
-login payload like `{ "email": { "$gt": "" } }`) that Zod's type
-validation mostly but not completely covers on its own.
-
-**CORS.** Restricted to the frontend's dev origins
-(`http://localhost:5173`, `http://127.0.0.1:5173`) with `credentials:
-true` — not left open to any origin.
-
-**Email normalisation.** Emails are lowercased and trimmed at both
-registration and lookup now (Part 1 only normalised at lookup) — so
-`Mpho@HustleHub.com` and `mpho@hustlehub.com` are always treated as the
-same account, including for duplicate-registration detection.
-
-### Threat model summary (extends Part 1's)
-
-| Threat | Control implemented |
+| Taxable income (R) | Tax (R) |
 |---|---|
-| Credential stuffing | bcrypt hashing (cost 12), generic login error, rate limiting on login |
-| User enumeration | Identical `401` for wrong password and unknown email |
-| Privilege escalation (role) | `role` enum restricted at registration; admin never self-assignable |
-| Broken access control (ownership) | Service-layer ownership check before every gig write, not just a role check |
-| Token theft / replay | Short-lived JWT (1h), HTTPS-only transport |
-| NoSQL injection | `express-mongo-sanitize` on every request, ahead of Zod validation |
-| Unrestricted resource consumption | Rate limiting on auth and booking endpoints |
-| Cross-origin abuse | CORS restricted to the known frontend origin |
-| Information disclosure via errors | Centralised handler — no stack traces, paths, or config values ever reach a response |
+| 0 – 245,100 | 18% |
+| 245,101 – 383,100 | 44,118 + 26% above 245,100 |
+| 383,101 – 530,200 | 79,998 + 31% above 383,100 |
+| 530,201 – 695,800 | 125,599 + 36% above 530,200 |
+| 695,801 – 887,000 | 185,215 + 39% above 695,800 |
+| 887,001 – 1,878,600 | 259,783 + 41% above 887,000 |
+| 1,878,601+ | 666,339 + 45% above 1,878,600 |
 
-## 7. Frontend
+**Estimated tax = bracket tax − R17,820, never below zero.**
 
-`hustlehub-frontend/` — Vite + React + TypeScript, `react-router-dom` for
-routing. Pages: Login, Register, Gigs (browse), Gig Detail (book button
-for clients), My Gigs (freelancer CRUD), My Bookings (client), Received
-Bookings (freelancer, includes total income). Navigation is role-aware —
-`ProtectedRoute` checks the logged-in user's role and redirects away from
-pages that don't apply to them.
+Worked examples: R180,000 gross gives 18% = R32,400, minus the rebate = **R14,580**, net R165,420 (effective rate 8.1%). R400,000 gross gives R79,998 + 31% of R16,900 = R85,237, minus the rebate = **R67,417**, net R332,583 (effective rate about 16.9%).
 
-**Token storage: `localStorage`.** The honest trade-off: this is
-vulnerable to theft if an XSS hole existed on this frontend. The
-mitigating factor is that React escapes all rendered text by default and
-nothing in this codebase uses `dangerouslySetInnerHTML`, which is what
-would actually open that hole — so the risk this trade-off accepts is
-one the codebase doesn't otherwise have an avenue for.
+How it is computed:
 
-## 8. Running it locally
+- Only transactions inside the current tax year count. The year runs 1 March to the last day of February (leap years included), in UTC.
+- Tax is calculated on year-to-date income as if it were a full year's income. The cumulative chart applies the same function to cumulative income at each month, because progressive tax cannot be added up month by month.
+- If tables for a newer tax year aren't loaded, the latest ones are used and the API says so in its `assumptions`.
 
-### Backend
-Same as Part 1 (`npm install`, `.env` from `.env.example`, `mkcert`
-certificate), plus:
+Assumptions (shown on the dashboard and returned by the API): all platform income is taxable, no expenses or deductions, primary rebate only, amounts in ZAR, and this is an estimate and not tax advice. The calculator is a pure function with unit tests at the bracket boundaries.
 
-```
-MONGODB_URI=mongodb+srv://<user>:<password>@<cluster-host>/hustlehub?appName=hustlehub-cluster
-```
+The dashboard shows four summary cards, a monthly income chart, a cumulative income-versus-tax chart, a "distance to next bracket" indicator, and the assumptions box. It is available to freelancers only.
 
-MongoDB Atlas (free M0 tier) — create a cluster, a database user, and
-allow network access, then use the connection string it gives you. The
-database (`hustlehub`) and its collections are created automatically on
-first write; nothing needs to be created manually in Atlas first.
+## 8. Security controls
 
-```bash
-npm run dev
-```
+| Area | Control |
+|---|---|
+| Passwords | bcrypt, cost 12. The hash is stripped from every response |
+| Tokens | JWT, HS256, 1 hour, payload `sub`, `role`, `tv`. The secret comes from the environment |
+| Transport | HTTPS on the API. nginx talks to the API over TLS inside the Docker network |
+| Validation | Zod on every body, then `express-mongo-sanitize` against NoSQL operator injection |
+| RBAC | `requireRole` plus ownership checks in the service layer, before any write |
+| Abuse limits | Rate limits: 5 login/register requests and 10 booking requests per 15 minutes per IP |
+| Headers | Helmet with an explicit CSP on the API. nginx adds its own CSP and headers for the frontend |
+| Errors | One central handler returns generic messages. Details go to logs only |
+| Enumeration | Identical `401` for unknown email, wrong password and locked account. A dummy bcrypt comparison keeps timing alike |
+| Privilege escalation | Registration accepts only `client` or `freelancer` |
 
-### Frontend
+### The two additional security features
 
-```bash
-cd hustlehub-frontend
-npm install
-npm run dev
-```
+**1. Account lockout.** The IP rate limiter alone cannot stop a distributed attack on one account. After 3 consecutive failed logins an account is locked for 15 minutes (both configurable). The locked response is identical to a wrong-password response, so an attacker cannot tell the account exists. Lock events are logged. The counter resets on a successful login or when the lock expires.
 
-Runs on `http://localhost:5173` by default. The backend's CORS
-configuration is already set to allow exactly this origin.
+**2. Logout with token revocation.** JWTs are stateless, so a stolen token normally stays valid until it expires. `POST /api/users/logout` increments the user's `tokenVersion`, and every request compares the token's `tv` to the database. Old tokens return `401 TOKEN_REVOKED`. The cost is one database read per authenticated request, which was accepted for this scale.
 
-## 9. Testing
+## 9. Logging
 
-**Postman/Newman** — `postman/HustleHub-Part2.postman_collection.json`
-and its paired environment file cover gig CRUD (including the ownership
-`403` case), booking creation (including the forbidden-role case),
-transaction history, and rate limiting. Run via:
+The API writes structured JSON with pino to stdout (`docker compose logs api`) and ships the same events to **Axiom**, a cloud logging platform (dataset `hustlehub-logs`). If no Axiom token is set, it logs to stdout only. A rejected token never crashes the API.
 
-```bash
-newman run postman/HustleHub-Part2.postman_collection.json \
-  -e postman/HustleHub-Part2.postman_environment.json
-```
+Every request gets a fresh request ID (returned as `X-Request-Id`), and each event inside it carries that ID automatically, so one request can be followed from start to finish.
 
-**Frontend** — `cd hustlehub-frontend && npm run test` (Vitest + React
-Testing Library): login form submission, and gig list rendering against
-a mocked API response.
+| Event | Why it matters |
+|---|---|
+| `auth.login.success`, `auth.login.failed` | Spot credential stuffing and password guessing |
+| `auth.account.locked` | A direct signal that an account is under attack |
+| `auth.register.success` | Account creation audit trail |
+| `auth.logout`, `auth.token.revoked` | Session tracking and detection of reused revoked tokens |
+| `booking.created`, `transaction.recorded` | Financial audit trail |
+| `transaction.failed` | Finds a booking whose transaction was not recorded |
+| `authz.denied` | Probing for access-control gaps (wrong role, not the owner) |
+| `rate.limited` | Abuse and brute-force attempts |
+| `http.request` | Method, path, status and duration for every request |
+| `error.unhandled` | Reliability. The stack goes to logs, never to the client |
 
-## 10. Evidence
+Never logged: passwords, tokens, authorization headers, query strings, or raw email addresses. Logins use a short SHA-256 hash of the email, and pino redaction covers the sensitive field names as a second layer.
 
-### Screenshots
+## 10. Testing
 
-Stored in [`frontend/screenshots/`](./frontend/screenshots/) — see the
-submission evidence document for the full list and what each shows.
-
-### Demonstration video
-
-**https://youtu.be/jPjLL0S1O74?si=GYdCMtQhk3E_keJO**
-
-## 11. Part 3 logging and CI/CD
-
-### Structured logging
-
-The backend uses Pino JSON logging with `pino-http` request logging. Every log uses the
-`HustleHub+` service and environment base fields, ISO timestamps, structured event names,
-and numeric Pino levels so the `@axiomhq/pino` multi-target transport maps levels correctly.
-
-Important events include registration/login outcomes, authorization failures, gig CRUD,
-booking creation and failures, transaction outcomes, income calculation, validation,
-HTTP requests, startup/shutdown, database failures, and process exceptions. Logs are
-written to stdout for Docker visibility and forwarded asynchronously to Axiom when both
-Axiom environment variables are configured.
-
-Configure:
-
-```dotenv
-AXIOM_TOKEN=
-AXIOM_DATASET=hustlehub-logs
-AXIOM_URL=
-LOG_LEVEL=info
-```
-
-`AXIOM_TOKEN` and `AXIOM_DATASET` are optional. Missing credentials disable remote shipping
-but never prevent startup. Use a local `.env` or deployment secret store; never commit the
-token. Keep the dataset name as `hustlehub-logs` in the supplied Axiom configuration.
-Axiom transport initialization and delivery errors are written to stderr, and `SIGTERM`,
-`SIGINT`, uncaught exceptions, and startup failures attempt to flush pending logs.
-
-Pino redaction removes passwords, password hashes, JWTs/tokens, authorization headers,
-cookies, API keys, MongoDB connection strings, and nested secret fields. HTTP logs record
-method, path, status, duration, request ID, and authenticated user ID, but never request
-bodies or credentials.
-
-To verify locally:
+| Level | Tool | What it covers |
+|---|---|---|
+| Backend unit | Vitest | Tax calculation and tax-year boundaries, lockout flow, auth middleware and revocation, log redaction, environment defaults. No database or network |
+| Frontend unit | Vitest and Testing Library | Login, gig list, dashboard rendering and states, logout behaviour, currency formatting |
+| API | Postman collection run by Newman | Auth, gigs, bookings, transactions, tax summary, RBAC rejections, lockout, logout revocation, rate limiting |
 
 ```bash
-cd hustlehub-backend
-npm run dev
-curl.exe -k https://localhost:5000/health
+cd hustlehub-backend && npm test
+cd hustlehub-frontend && npm test
+bash scripts/ci-newman.sh      # starts a throwaway stack and runs both Newman phases
 ```
 
-In Docker, inspect JSON on stdout with `docker compose logs -f api`. For Axiom, open the
-`hustlehub-logs` dataset and confirm events such as `server.started`, `http.request`,
-`auth.login.success`, or `booking.created` appear after requests are made.
+Newman runs in **two phases**. The login and register limiter is shared and allows only 5 requests per 15 minutes, so the functional folders run with the limits raised through environment variables, and the rate-limit folder then runs against a recreated API container with the real limits. The lockout and logout tests use their own throwaway users so they cannot break other tests.
 
-### GitHub Actions
+## 11. CI/CD pipeline
 
-`.github/workflows/ci.yml` runs on pushes to `main`, pull requests targeting `main`, and
-manual dispatch. The backend job runs `npm ci`, ESLint, TypeScript checking, Vitest,
-production build, and dependency auditing. The frontend job runs `npm ci`, ESLint, Vitest,
-TypeScript/Vite build, and dependency auditing.
+`.github/workflows/ci.yml` runs on every push and pull request. Any failing step fails the run.
 
-The Docker/API job validates Compose, builds both images, starts the ephemeral MongoDB and
-API stack, and runs the existing Part 3 Newman collection through `scripts/ci-newman.sh`.
-Tests use a temporary MongoDB service and CI JWT value, never the production database or
-Axiom credentials.
+| Job | Steps |
+|---|---|
+| backend | install, typecheck, lint, unit tests, build, `npm audit` (high and above) |
+| frontend | install, lint, unit tests, build, `npm audit` |
+| hygiene | check for leftover ownership tags, gitleaks secret scan over full history |
+| stack | generate certs, build both images with Compose, start them with a throwaway Mongo, run Newman (both phases), check the UI, the `/api` proxy, the CSP header and that `X-Powered-By` is absent, scan both images with Trivy (HIGH and CRITICAL) |
 
-Required repository secret: none for the base pipeline because Axiom is disabled/blank in
-CI compose and tests. Optional secrets for a future deployment workflow are `AXIOM_TOKEN`
-and `AXIOM_DATASET`; the production dataset is `hustlehub-logs`.
+`.github/workflows/codeql.yml` runs CodeQL on push, pull request and weekly. The pipeline needs no secrets, because it never touches Atlas or Axiom. A deliberately broken test on a throwaway branch shows the pipeline failing (see the evidence below).
 
-View runs under the repository's **Actions** tab. A push or pull request is successful only
-when backend checks, frontend checks, Docker validation, and Newman phases all pass.
+## 12. Static analysis
+
+| Tool | Checks |
+|---|---|
+| ESLint with `eslint-plugin-security` and `typescript-eslint` | Unsafe patterns and type-aware issues in both apps, on every run |
+| CodeQL (security-extended) | Deeper data-flow analysis for injection, XSS and similar |
+| `npm audit` | Known vulnerabilities in dependencies |
+| Trivy | Vulnerabilities in the built images |
+| gitleaks | Committed secrets |
+
+Results: [CONFIRM: final counts, for example "ESLint 0 errors in both projects, CodeQL 0 open alerts, npm audit 0 high/critical, Trivy 0 fixable HIGH/CRITICAL"].
+
+Every finding and its resolution is in [`docs/static-analysis-notes.md`](./docs/static-analysis-notes.md): real issues were fixed, and false positives (mostly `detect-object-injection`) were suppressed with the narrowest inline disable and a written reason. [CONFIRM: add 2 or 3 of the most meaningful fixes here, in one sentence each].
+
+## 13. Docker
+
+```
+hustlehub-backend/Dockerfile      multi-stage, Node 22 alpine, non-root user, healthcheck
+hustlehub-frontend/Dockerfile     build stage, then unprivileged nginx
+hustlehub-frontend/nginx.conf     SPA fallback, /api proxy, security headers and CSP
+docker-compose.yml                api + client, secrets from the ignored .env, certs mounted read-only
+docker-compose.ci.yml             adds a throwaway Mongo for CI and test runs
+scripts/gen-certs.sh              creates the local certificate for the containers
+```
+
+Design decisions:
+
+- Secrets are never baked into images. `.env` and certificates are excluded by `.dockerignore` and supplied at run time.
+- Both containers run as non-root users and have healthchecks. The client starts only after the API is healthy.
+- nginx forwards the real client address, and the API trusts exactly one proxy hop (`TRUST_PROXY=1`), so rate limiting and logs see real IPs.
+- nginx and the API talk over TLS inside the Docker network. [CONFIRM: "nginx verifies the API certificate" or "verification is off because traffic never leaves the private Docker network"].
+
+## 14. Final security review
+
+| Threat | How it is handled | Where it is tested |
+|---|---|---|
+| **Injection** (NoSQL) | Zod rejects wrong types, `express-mongo-sanitize` strips operator keys, Mongoose queries are built without string concatenation | Validation tests, Newman invalid-input cases |
+| **Cross-site scripting** | React escapes output and nothing uses `dangerouslySetInnerHTML`. nginx sets a CSP for the app (scripts from `'self'` only). The API's CSP blocks all scripts and styles. [CONFIRM against `nginx.conf`: allowed origins are `'self'` plus the gig cover-image host, with `'unsafe-inline'` for styles only] | DevTools console shows no CSP violations |
+| **Authentication weaknesses** | bcrypt cost 12, 1 hour JWTs, account lockout, token revocation on logout, generic errors, IP rate limiting | Lockout and logout tests, Newman folders 5 to 7 |
+| **Access control** | Role checks on every protected route, ownership checks before gig writes, clients cannot reach freelancer endpoints, tax data is limited to the owner | Newman 403 cases, unit tests |
+| **Sensitive data exposure** | Hashes never returned, secrets only in the environment, logs redacted and email-hashed, images carry no secrets | Axiom screenshots, `ls /app` in the container |
+| **Brute force and abuse** | Rate limits plus per-account lockout, both logged | `rate.limited` and `auth.account.locked` events |
+| **Supply chain** | `npm audit`, Trivy on images, gitleaks, CodeQL, pinned image tags | Pipeline |
+| **Monitoring gaps** | Structured events for logins, bookings, transactions, denials and errors, shipped off-box to Axiom | Axiom screenshots |
+
+Known limitations, stated honestly:
+
+- The JWT is stored in `localStorage`. XSS would expose it, which is why the CSP and React's escaping matter. httpOnly cookies would be stronger but need CSRF protection.
+- Booking and transaction creation are not atomic (see section 6).
+- Port 5000 is published so Postman can reach the API directly. Because `TRUST_PROXY=1`, someone connecting directly could spoof `X-Forwarded-For`. In a real deployment only the proxy would be exposed.
+- The local certificate is self-signed, and the Atlas network allowlist is open (`0.0.0.0/0`) because four people on different networks use it. Neither suits production.
+- The tax model is a simplified estimate and not tax advice.
+
+## 15. Evidence
+
+- Screenshots: [`screenshots/part3/`](./screenshots/part3/) (frontend, API, Docker, Axiom, Atlas, pipeline, static analysis, tests)
+- Demonstration video: https://youtu.be/nLMWCF2E3BA?si=0xl3_TVC-zWY98vn
+- Pipeline: https://github.com/rezy-rex/-HustleHub-/actions/runs/42484536868
+
+
+## 16. Team
+
+| Member | Main areas |
+|---|---|
+| Thuso | Integration, Docker and Compose, CI/CD pipeline, static analysis, final documentation |
+| Sixolile | Data models and repositories, account lockout and token revocation |
+| Odirile | Controllers and services, RBAC, tax estimation, structured logging |
+| Lesedi | React frontend, income dashboard, frontend container |
