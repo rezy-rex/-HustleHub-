@@ -119,32 +119,25 @@ export const userRepository: UserRepository = {
   },
 
   async registerFailedLogin(id: string, maxFailures: number, lockMinutes: number): Promise<User | null> {
-    const lockUntil = new Date(Date.now() + lockMinutes * 60 * 1000);
-    const doc = await UserModel.findOneAndUpdate(
+    const incremented = await UserModel.findOneAndUpdate(
       { _id: id },
-      [
-        {
-          $set: {
-            failedLoginAttempts: {
-              $add: [{ $ifNull: ['$failedLoginAttempts', 0] }, 1],
-            },
-          },
-        },
-        {
-          $set: {
-            lockUntil: {
-              $cond: [
-                { $gte: ['$failedLoginAttempts', maxFailures] },
-                lockUntil,
-                null,
-              ],
-            },
-          },
-        },
-      ],
+      { $inc: { failedLoginAttempts: 1 } },
       { new: true }
     ).exec();
-    return doc ? toUser(doc) : null;
+
+    if (!incremented) return null;
+
+    const failedLoginAttempts = incremented.failedLoginAttempts ?? 0;
+    if (failedLoginAttempts < maxFailures) return toUser(incremented);
+
+    const lockUntil = new Date(Date.now() + lockMinutes * 60 * 1000);
+    const locked = await UserModel.findOneAndUpdate(
+      { _id: id },
+      { $set: { lockUntil } },
+      { new: true }
+    ).exec();
+
+    return locked ? toUser(locked) : toUser(incremented);
   },
 
   async resetLoginFailures(id: string): Promise<void> {
