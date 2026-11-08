@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
 import mongoSanitize from 'express-mongo-sanitize';
 import { env } from './config/env';
 import { helmetSecurity } from './config/security';
@@ -27,7 +28,13 @@ app.use(
 app.use(express.json());
 app.use(mongoSanitize());
 
-app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
+app.get('/health', (_req, res) => {
+  const databaseReady = mongoose.connection.readyState === 1;
+  res.status(databaseReady ? 200 : 503).json({
+    status: databaseReady ? 'ok' : 'not_ready',
+    database: databaseReady ? 'connected' : 'disconnected',
+  });
+});
 
 app.use('/api/users', authRoutes);
 app.use('/api/gigs', gigRoutes);

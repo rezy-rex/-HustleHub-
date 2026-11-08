@@ -14,8 +14,8 @@ async function startServer(): Promise<void> {
   await connectDB();
 
   httpServer = https.createServer(httpsOptions, app);
-  httpServer.listen(env.PORT, () => {
-    logEvent('server.started', { port: env.PORT, protocol: 'https' });
+  httpServer.listen(env.PORT, '0.0.0.0', () => {
+    logEvent('server.started', { host: '0.0.0.0', port: env.PORT, protocol: 'https' });
   });
 }
 

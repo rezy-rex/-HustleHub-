@@ -22,7 +22,7 @@ COPY package.json ./
 USER node
 EXPOSE 5000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD node -e "const https = require('https'); const req = https.request({ host: 'localhost', port: 5000, path: '/health', method: 'GET', rejectUnauthorized: false }, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"
 
 CMD ["node", "dist/server.js"]

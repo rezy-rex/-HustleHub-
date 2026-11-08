@@ -31,6 +31,16 @@ services:
     volumes:
       - ./certs/docker/api.key:/app/certs/localhost-key.pem:ro
       - ./certs/docker/api.crt:/app/certs/localhost.pem:ro
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "const https=require('https');const r=https.request({host:'localhost',port:5000,path:'/health',rejectUnauthorized:false},s=>process.exit(s.statusCode===200?0:1));r.on('error',()=>process.exit(1));r.end()"
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
 
   client:
     build:
@@ -40,6 +50,17 @@ services:
     ports:
       - "8080:8080"
     restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - --spider
+        - http://127.0.0.1:8080/
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
     depends_on:
       api:
         condition: service_healthy

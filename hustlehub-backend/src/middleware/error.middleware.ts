@@ -17,6 +17,7 @@ export function notFoundMiddleware(req: Request, res: Response): void {
 // through one consistent boundary. Express recognises this as error-handling middleware specifically because
 // it takes 4 arguments — `next` must stay in the signature even though it's
 // only used implicitly (Express calls this instead of a route handler).
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Required by the Express error middleware signature
 export function errorMiddleware(err: unknown, req: Request, res: Response, next: NextFunction): void {
   if (err instanceof AppError) {
     const level = err.statusCode >= 500 ? 'error' : err.statusCode >= 400 ? 'warn' : 'info';
